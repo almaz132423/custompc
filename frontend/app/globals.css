@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0b0e11;
+  --color-surface: #14181d;
+  --color-surface-hover: #1b2027;
+  --color-border: #262b33;
+  --color-text: #f2f4f7;
+  --color-muted: #9aa4b2;
+  --color-accent: #4d8aff;
+  --color-accent-hover: #6fa0ff;
+  --color-accent-soft: #1a2740;
+
+  --font-display: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", monospace;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background-color: var(--color-accent);
+  color: var(--color-ink);
+}

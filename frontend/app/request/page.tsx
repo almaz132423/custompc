@@ -1,0 +1,164 @@
+"use client";
+
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const PURPOSE_OPTIONS = [
+  { value: "GAMES", label: "Игры" },
+  { value: "WORK", label: "Работа" },
+  { value: "MONTAGE", label: "Монтаж" },
+  { value: "THREE_D", label: "3D" },
+  { value: "STREAMING", label: "Стриминг" },
+  { value: "AI", label: "AI" },
+  { value: "UNIVERSAL", label: "Универсальный" },
+];
+
+const leadSchema = z.object({
+  name: z.string().min(2, "Введите имя"),
+  contact: z.string().min(5, "Введите телефон или Telegram"),
+  budget: z.string().optional(),
+  purpose: z.string().optional(),
+  comment: z.string().optional(),
+});
+
+type LeadFormValues = z.infer<typeof leadSchema>;
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+export default function RequestPage() {
+  const [status, setStatus] = useState<
+    "idle" | "sending" | "success" | "error"
+  >("idle");
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<LeadFormValues>({
+    resolver: zodResolver(leadSchema),
+  });
+
+  async function onSubmit(values: LeadFormValues) {
+    setStatus("sending");
+    try {
+      const res = await fetch(`${API_URL}/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      if (!res.ok) throw new Error("request failed");
+      setStatus("success");
+      reset();
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  if (status === "success") {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
+        <h1 className="font-display text-3xl font-semibold">Спасибо!</h1>
+        <p className="mt-4 text-muted">
+          Заявка получена. Мы свяжемся с вами для уточнения конфигурации.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto min-h-screen max-w-xl px-6 py-20">
+      <h1 className="font-display text-3xl font-semibold">Получить расчёт</h1>
+      <p className="mt-3 text-muted">
+        Оставьте контакты — подберём конфигурацию и посчитаем стоимость.
+      </p>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="mt-10 flex flex-col gap-5"
+      >
+        <div>
+          <label className="block font-mono text-xs text-muted">Имя *</label>
+          <input
+            {...register("name")}
+            className="mt-2 w-full rounded-md border border-border bg-surface px-4 py-3 outline-none focus:border-accent"
+          />
+          {errors.name && (
+            <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block font-mono text-xs text-muted">
+            Телефон / Telegram *
+          </label>
+          <input
+            {...register("contact")}
+            className="mt-2 w-full rounded-md border border-border bg-surface px-4 py-3 outline-none focus:border-accent"
+          />
+          {errors.contact && (
+            <p className="mt-1 text-xs text-red-400">
+              {errors.contact.message}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block font-mono text-xs text-muted">
+            Бюджет
+          </label>
+          <input
+            {...register("budget")}
+            placeholder="Например, 150000"
+            className="mt-2 w-full rounded-md border border-border bg-surface px-4 py-3 outline-none focus:border-accent"
+          />
+        </div>
+
+        <div>
+          <label className="block font-mono text-xs text-muted">
+            Назначение
+          </label>
+          <select
+            {...register("purpose")}
+            className="mt-2 w-full rounded-md border border-border bg-surface px-4 py-3 outline-none focus:border-accent"
+          >
+            <option value="">Не важно</option>
+            {PURPOSE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block font-mono text-xs text-muted">
+            Комментарий
+          </label>
+          <textarea
+            {...register("comment")}
+            rows={4}
+            className="mt-2 w-full rounded-md border border-border bg-surface px-4 py-3 outline-none focus:border-accent"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={status === "sending"}
+          className="mt-4 rounded-md bg-accent px-6 py-3 font-sans text-sm font-medium text-ink transition-colors hover:bg-accent-hover disabled:opacity-60"
+        >
+          {status === "sending" ? "Отправляем..." : "Получить расчёт"}
+        </button>
+
+        {status === "error" && (
+          <p className="text-sm text-red-400">
+            Не получилось отправить заявку. Проверь, что backend запущен, и
+            попробуй ещё раз.
+          </p>
+        )}
+      </form>
+    </div>
+  );
+}
