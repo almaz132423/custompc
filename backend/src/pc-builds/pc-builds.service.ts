@@ -21,7 +21,13 @@ export class PcBuildsService {
       include: {
         images: true,
         category: true,
-        components: { include: { component: true } },
+        components: {
+          include: {
+            component: {
+              include: { category: true },
+            },
+          },
+        },
       },
     });
 

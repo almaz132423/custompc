@@ -16,10 +16,10 @@ async function main() {
   });
 
   await prisma.pCBuild.upsert({
-    where: { slug: 'pk-start' },
+    where: { slug: 'start' },
     update: {},
     create: {
-      slug: 'pk-start',
+      slug: 'start',
       name: 'ПК START',
       description: 'Стартовый игровой ПК для 1080p',
       price: 89990,
@@ -35,10 +35,10 @@ async function main() {
   });
 
   await prisma.pCBuild.upsert({
-    where: { slug: 'pk-gaming' },
+    where: { slug: 'gaming' },
     update: {},
     create: {
-      slug: 'pk-gaming',
+      slug: 'gaming',
       name: 'ПК GAMING',
       description: 'Игровой ПК для 1440p',
       price: 149990,
@@ -54,10 +54,10 @@ async function main() {
   });
 
   await prisma.pCBuild.upsert({
-    where: { slug: 'pk-pro' },
+    where: { slug: 'pro' },
     update: {},
     create: {
-      slug: 'pk-pro',
+      slug: 'pro',
       name: 'ПК PRO',
       description: 'Мощный ПК для 4K и требовательных задач',
       price: 229990,

@@ -10,8 +10,22 @@ export type PCBuild = {
   resolution: string | null;
   warrantyMonths: number | null;
   buildTimeDays: number | null;
+  avitoUrl: string | null;
   images: { id: string; url: string; sortOrder: number }[];
   category: { id: string; name: string; slug: string } | null;
+};
+
+export type PCBuildDetail = PCBuild & {
+  components: {
+    id: string;
+    quantity: number;
+    component: {
+      id: string;
+      manufacturer: string;
+      model: string;
+      category: { name: string } | null;
+    };
+  }[];
 };
 
 export async function getPcBuilds(): Promise<PCBuild[]> {
@@ -20,8 +34,22 @@ export async function getPcBuilds(): Promise<PCBuild[]> {
     if (!res.ok) return [];
     return res.json();
   } catch {
-    // backend недоступен (не запущен) — на главной просто не покажем блок сборок
+    // backend недоступен (не запущен) — просто не покажем блок сборок
     return [];
+  }
+}
+
+export async function getPcBuildBySlug(
+  slug: string,
+): Promise<PCBuildDetail | null> {
+  try {
+    const res = await fetch(`${API_URL}/pc-builds/${slug}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
   }
 }
 
