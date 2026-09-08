@@ -1,0 +1,397 @@
+// Prisma schema для CustomPS
+// Соответствует минимальной модели данных из раздела 52 ТЗ.
+//
+// Как использовать:
+// 1. В папке backend выполни `npx prisma init` (если ещё не выполнял) —
+//    появятся папка prisma/ и файл .env
+// 2. Замени содержимое prisma/schema.prisma на этот файл
+// 3. Настрой .env по образцу backend.env.example
+// 4. Выполни: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- ENUMS ----------
+
+enum Role {
+  ADMIN
+  MANAGER
+}
+
+enum ProductStatus {
+  AVAILABLE
+  HIDDEN
+  SOLD
+}
+
+enum Purpose {
+  GAMES
+  WORK
+  MONTAGE
+  THREE_D
+  STREAMING
+  AI
+  UNIVERSAL
+}
+
+enum Resolution {
+  R1080P
+  R1440P
+  R4K
+}
+
+enum ConfiguratorPriority {
+  MAX_FPS
+  PRICE_PERFORMANCE
+  SILENCE
+  APPEARANCE
+  UPGRADABILITY
+}
+
+enum ComponentCategoryCode {
+  CPU
+  GPU
+  MOTHERBOARD
+  RAM
+  SSD
+  HDD
+  PSU
+  CASE
+  COOLING
+}
+
+enum LeadStatus {
+  NEW
+  IN_PROGRESS
+  CONTACTED
+  CALCULATED
+  AGREED
+  ORDER
+  REJECTED
+}
+
+enum OrderStatusStage {
+  NEW
+  AWAITING_PAYMENT
+  PAID
+  PURCHASING
+  COMPONENTS_RECEIVED
+  ASSEMBLY
+  TESTING
+  READY
+  ISSUED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+}
+
+enum ServiceType {
+  BUILD
+  UPGRADE
+  REPAIR
+  MAINTENANCE
+}
+
+// ---------- ПОЛЬЗОВАТЕЛИ ----------
+
+// Сотрудники (админка). Раздел 4.5 ТЗ — роли ADMIN / MANAGER.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         Role     @default(MANAGER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Клиенты сайта (не путать с User — регистрация клиентов в MVP не нужна,
+// Customer создаётся автоматически при первой заявке).
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String
+  telegram  String?
+  createdAt DateTime @default(now())
+
+  leads  Lead[]
+  orders Order[]
+}
+
+// ---------- КАТАЛОГ ----------
+
+// Категория готовых сборок (например "Игровые", "Для работы")
+model Category {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  pcBuilds PCBuild[]
+}
+
+// Категория комплектующих: CPU, GPU, RAM и т.д. (раздел 35 ТЗ)
+model ComponentCategory {
+  id   String                 @id @default(cuid())
+  code ComponentCategoryCode  @unique
+  name String
+
+  components Component[]
+}
+
+// Комплектующее (раздел 35 ТЗ)
+model Component {
+  id            String   @id @default(cuid())
+  categoryId    String
+  category      ComponentCategory @relation(fields: [categoryId], references: [id])
+  manufacturer  String
+  model         String
+  price         Decimal
+  specs         Json?    // произвольные характеристики (частота, объём и т.д.)
+  imageUrl      String?
+  inStock       Boolean  @default(true)
+  // Параметры совместимости: socket, ramType, formFactor, lengthMm и т.д.
+  // Используются CompatibilityRule для проверки (раздел 21 ТЗ)
+  compatibility Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  pcBuildLinks PCBuildComponent[]
+}
+
+// Готовая сборка ПК — то, что отображается в каталоге /pc (разделы 16-17 ТЗ)
+model PCBuild {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  name           String
+  description    String?
+  price          Decimal
+  status         ProductStatus @default(AVAILABLE)
+  purpose        Purpose
+  resolution     Resolution?
+  warrantyMonths Int?
+  buildTimeDays  Int?
+  avitoUrl       String?       // раздел 14 ТЗ — «Купить на Авито»
+  categoryId     String?
+  category       Category?     @relation(fields: [categoryId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  images     PCBuildImage[]
+  components PCBuildComponent[]
+  leads      Lead[]
+  orderItems OrderItem[]
+}
+
+model PCBuildImage {
+  id        String  @id @default(cuid())
+  pcBuildId String
+  pcBuild   PCBuild @relation(fields: [pcBuildId], references: [id], onDelete: Cascade)
+  url       String
+  sortOrder Int     @default(0)
+}
+
+// Состав сборки — какие комплектующие в неё входят
+model PCBuildComponent {
+  id          String    @id @default(cuid())
+  pcBuildId   String
+  pcBuild     PCBuild   @relation(fields: [pcBuildId], references: [id], onDelete: Cascade)
+  componentId String
+  component   Component @relation(fields: [componentId], references: [id])
+  quantity    Int       @default(1)
+
+  @@unique([pcBuildId, componentId])
+}
+
+// Правила проверки совместимости (раздел 21 ТЗ)
+model CompatibilityRule {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  // Условие несовместимости в JSON, например:
+  // { "if": {"category": "CPU", "socket": "AM5"},
+  //   "requires": {"category": "MOTHERBOARD", "socket": "AM5"} }
+  rule     Json
+  isActive Boolean @default(true)
+}
+
+// ---------- КОНФИГУРАТОР ----------
+
+// Список игр для шага 4 конфигуратора (раздел 18 ТЗ), редактируется из админки
+model Game {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
+}
+
+// Правила подбора рекомендованной конфигурации (раздел 20 ТЗ):
+// назначение + бюджет + разрешение + приоритет -> рекомендованные компоненты
+model ConfiguratorRule {
+  id                     String                @id @default(cuid())
+  purpose                Purpose
+  minBudget              Decimal
+  maxBudget              Decimal
+  resolution             Resolution?
+  priority               ConfiguratorPriority?
+  recommendedComponents  Json                  // список componentId по категориям
+  isActive               Boolean               @default(true)
+}
+
+// ---------- УСЛУГИ ----------
+
+// Раздел 27 ТЗ: сборка, апгрейд, ремонт, обслуживание и т.д.
+model Service {
+  id           String      @id @default(cuid())
+  type         ServiceType
+  name         String
+  description  String?
+  priceFrom    Decimal?
+  priceTo      Decimal?
+  durationDays Int?
+  isActive     Boolean     @default(true)
+}
+
+// ---------- ЗАЯВКИ И ЗАКАЗЫ ----------
+
+// Заявка (раздел 22-23 ТЗ)
+model Lead {
+  id            String     @id @default(cuid())
+  customerId    String?
+  customer      Customer?  @relation(fields: [customerId], references: [id])
+  name          String
+  contact       String     // телефон или Telegram, обязательное поле формы
+  budget        Decimal?
+  purpose       Purpose?
+  configuration Json?      // снапшот результата конфигуратора на момент заявки
+  pcBuildId     String?
+  pcBuild       PCBuild?   @relation(fields: [pcBuildId], references: [id])
+  comment       String?
+  status        LeadStatus @default(NEW)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  order Order?
+}
+
+// Заказ создаётся из согласованной заявки (раздел 24-25 ТЗ)
+model Order {
+  id            String           @id @default(cuid())
+  number        String           @unique
+  leadId        String?          @unique
+  lead          Lead?            @relation(fields: [leadId], references: [id])
+  customerId    String
+  customer      Customer         @relation(fields: [customerId], references: [id])
+  totalPrice    Decimal
+  costPrice     Decimal?
+  profit        Decimal?
+  comment       String?
+  paymentStatus PaymentStatus    @default(UNPAID)
+  status        OrderStatusStage @default(NEW)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  items    OrderItem[]
+  payments Payment[]
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  pcBuildId String?
+  pcBuild   PCBuild? @relation(fields: [pcBuildId], references: [id])
+  name      String
+  price     Decimal
+  quantity  Int      @default(1)
+}
+
+// Раздел 26 ТЗ — храним статус оплаты, без онлайн-эквайринга в MVP
+model Payment {
+  id      String   @id @default(cuid())
+  orderId String
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount  Decimal
+  paidAt  DateTime @default(now())
+  method  String?
+}
+
+// ---------- ДОВЕРИЕ И КОНТЕНТ ----------
+
+// Портфолио реальных работ (раздел 28 ТЗ)
+model Portfolio {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  clientTask  String?
+  budget      Decimal?
+  components  Json?
+  description String?
+  result      String?
+  testing     String?
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  images PortfolioImage[]
+}
+
+model PortfolioImage {
+  id          String    @id @default(cuid())
+  portfolioId String
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  url         String
+  sortOrder   Int       @default(0)
+}
+
+// Отзывы (раздел 29 ТЗ)
+model Review {
+  id             String   @id @default(cuid())
+  customerName   String
+  text           String
+  rating         Int
+  photoUrl       String?
+  purchasedBuild String?
+  isPublished    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+// Статьи блога (раздел /blog)
+model Article {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  content     String
+  coverUrl    String?
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+// SEO-метаданные для конкретных страниц (раздел 42 ТЗ)
+model SeoMetadata {
+  id          String  @id @default(cuid())
+  path        String  @unique // например "/pc/gaming-1440p"
+  title       String?
+  description String?
+  h1          String?
+  ogTitle     String?
+  ogImage     String?
+  canonical   String?
+}
+
+// Общие настройки сайта, редактируемые из админки без правки кода
+// (раздел 14, 41 ТЗ): ссылка на Авито, Telegram, телефон и т.д.
+model SiteSettings {
+  id    String @id @default(cuid())
+  key   String @unique // например "avito_url", "telegram_url", "phone"
+  value String
+}
