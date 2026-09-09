@@ -1,14 +1,5 @@
-import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
-
-export enum Purpose {
-  GAMES = 'GAMES',
-  WORK = 'WORK',
-  MONTAGE = 'MONTAGE',
-  THREE_D = 'THREE_D',
-  STREAMING = 'STREAMING',
-  AI = 'AI',
-  UNIVERSAL = 'UNIVERSAL',
-}
+import { IsEnum, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
+import { Purpose } from '../../common/enums.js';
 
 export class CreateLeadDto {
   @IsString()
@@ -30,4 +21,9 @@ export class CreateLeadDto {
   @IsOptional()
   @IsString()
   comment?: string;
+
+  // Снапшот результата конфигуратора (раздел 22 ТЗ, поле "Конфигурация")
+  @IsOptional()
+  @IsObject()
+  configuration?: Record<string, unknown>;
 }

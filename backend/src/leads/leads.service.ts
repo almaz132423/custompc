@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
 
@@ -14,6 +15,7 @@ export class LeadsService {
         budget: dto.budget || undefined,
         purpose: dto.purpose,
         comment: dto.comment,
+        configuration: dto.configuration as Prisma.InputJsonValue | undefined,
       },
     });
   }

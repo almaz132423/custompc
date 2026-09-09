@@ -34,7 +34,6 @@ export async function getPcBuilds(): Promise<PCBuild[]> {
     if (!res.ok) return [];
     return res.json();
   } catch {
-    // backend недоступен (не запущен) — просто не покажем блок сборок
     return [];
   }
 }
@@ -46,6 +45,34 @@ export async function getPcBuildBySlug(
     const res = await fetch(`${API_URL}/pc-builds/${slug}`, {
       cache: "no-store",
     });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export type RecommendParams = {
+  purpose?: string;
+  budget?: string;
+  resolution?: string;
+  priority?: string;
+};
+
+export async function getRecommendation(
+  params: RecommendParams,
+): Promise<PCBuild | null> {
+  try {
+    const query = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => Boolean(v)) as [
+        string,
+        string,
+      ][],
+    );
+    const res = await fetch(
+      `${API_URL}/configurator/recommend?${query.toString()}`,
+      { cache: "no-store" },
+    );
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -81,4 +108,16 @@ const RESOLUTION_LABELS: Record<string, string> = {
 export function resolutionLabel(resolution: string | null): string | null {
   if (!resolution) return null;
   return RESOLUTION_LABELS[resolution] ?? resolution;
+}
+
+const PRIORITY_LABELS: Record<string, string> = {
+  MAX_FPS: "Максимум FPS",
+  PRICE_PERFORMANCE: "Цена/производительность",
+  SILENCE: "Тишина",
+  APPEARANCE: "Внешний вид",
+  UPGRADABILITY: "Возможность апгрейда",
+};
+
+export function priorityLabel(priority: string): string {
+  return PRIORITY_LABELS[priority] ?? priority;
 }

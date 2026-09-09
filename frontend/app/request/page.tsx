@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
 const PURPOSE_OPTIONS = [
   { value: "GAMES", label: "Игры" },
@@ -27,7 +30,20 @@ type LeadFormValues = z.infer<typeof leadSchema>;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-export default function RequestPage() {
+function RequestForm() {
+  const searchParams = useSearchParams();
+
+  // Если пришли из конфигуратора — подставляем результат в форму
+  // и приложим их же снапшотом в поле "configuration" (раздел 22 ТЗ)
+  const prefillPurpose = searchParams.get("purpose") ?? "";
+  const prefillBudget = searchParams.get("budget") ?? "";
+  const prefillResolution = searchParams.get("resolution") ?? "";
+  const prefillPriority = searchParams.get("priority") ?? "";
+
+  const hasConfiguratorData = Boolean(
+    prefillPurpose || prefillResolution || prefillPriority,
+  );
+
   const [status, setStatus] = useState<
     "idle" | "sending" | "success" | "error"
   >("idle");
@@ -39,6 +55,10 @@ export default function RequestPage() {
     reset,
   } = useForm<LeadFormValues>({
     resolver: zodResolver(leadSchema),
+    defaultValues: {
+      purpose: prefillPurpose || undefined,
+      budget: prefillBudget || undefined,
+    },
   });
 
   async function onSubmit(values: LeadFormValues) {
@@ -47,7 +67,17 @@ export default function RequestPage() {
       const res = await fetch(`${API_URL}/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          configuration: hasConfiguratorData
+            ? {
+                purpose: prefillPurpose || undefined,
+                budget: prefillBudget || undefined,
+                resolution: prefillResolution || undefined,
+                priority: prefillPriority || undefined,
+              }
+            : undefined,
+        }),
       });
       if (!res.ok) throw new Error("request failed");
       setStatus("success");
@@ -59,7 +89,7 @@ export default function RequestPage() {
 
   if (status === "success") {
     return (
-      <div className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
         <h1 className="font-display text-3xl font-semibold">Спасибо!</h1>
         <p className="mt-4 text-muted">
           Заявка получена. Мы свяжемся с вами для уточнения конфигурации.
@@ -69,10 +99,14 @@ export default function RequestPage() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-xl px-6 py-20">
-      <h1 className="font-display text-3xl font-semibold">Получить расчёт</h1>
+    <div className="mx-auto max-w-xl">
+      <h1 className="font-display text-3xl font-semibold">
+        Получить расчёт
+      </h1>
       <p className="mt-3 text-muted">
-        Оставьте контакты — подберём конфигурацию и посчитаем стоимость.
+        {hasConfiguratorData
+          ? "Мы сохранили параметры из конфигуратора — просто оставьте контакты."
+          : "Оставьте контакты — подберём конфигурацию и посчитаем стоимость."}
       </p>
 
       <form
@@ -159,6 +193,20 @@ export default function RequestPage() {
           </p>
         )}
       </form>
+    </div>
+  );
+}
+
+export default function RequestPage() {
+  return (
+    <div className="min-h-screen bg-ink">
+      <SiteHeader />
+      <main className="px-6 py-20">
+        <Suspense fallback={<p className="text-center text-muted">Загрузка…</p>}>
+          <RequestForm />
+        </Suspense>
+      </main>
+      <SiteFooter />
     </div>
   );
 }
