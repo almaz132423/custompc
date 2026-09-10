@@ -22,6 +22,11 @@ export class CreateLeadDto {
   @IsString()
   comment?: string;
 
+  // Откуда пришла заявка: "Конфигуратор", "Покупка ПК", название услуги и т.д.
+  @IsOptional()
+  @IsString()
+  category?: string;
+
   // Снапшот результата конфигуратора (раздел 22 ТЗ, поле "Конфигурация")
   @IsOptional()
   @IsObject()

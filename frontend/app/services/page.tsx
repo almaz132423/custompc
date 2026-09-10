@@ -93,7 +93,7 @@ export default function ServicesPage() {
               </div>
 
               <Link
-                href="/request"
+                href={`/request?category=${encodeURIComponent(service.title)}`}
                 className="mt-4 rounded-md border border-border px-4 py-2 text-center font-sans text-sm transition-colors hover:border-accent hover:bg-ink"
               >
                 Заказать

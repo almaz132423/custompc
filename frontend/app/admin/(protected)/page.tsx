@@ -39,6 +39,7 @@ export default function AdminDashboardPage() {
                 <th className="px-4 py-3">Дата</th>
                 <th className="px-4 py-3">Имя</th>
                 <th className="px-4 py-3">Контакт</th>
+                <th className="px-4 py-3">Категория</th>
                 <th className="px-4 py-3">Бюджет</th>
                 <th className="px-4 py-3">Назначение</th>
                 <th className="px-4 py-3">Статус</th>
@@ -52,6 +53,7 @@ export default function AdminDashboardPage() {
                   </td>
                   <td className="px-4 py-3">{lead.name}</td>
                   <td className="px-4 py-3 font-mono">{lead.contact}</td>
+                  <td className="px-4 py-3">{lead.category ?? "—"}</td>
                   <td className="px-4 py-3 font-mono">
                     {lead.budget ? `${lead.budget} ₽` : "—"}
                   </td>

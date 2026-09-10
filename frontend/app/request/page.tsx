@@ -33,12 +33,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 function RequestForm() {
   const searchParams = useSearchParams();
 
-  // Если пришли из конфигуратора — подставляем результат в форму
-  // и приложим их же снапшотом в поле "configuration" (раздел 22 ТЗ)
   const prefillPurpose = searchParams.get("purpose") ?? "";
   const prefillBudget = searchParams.get("budget") ?? "";
   const prefillResolution = searchParams.get("resolution") ?? "";
   const prefillPriority = searchParams.get("priority") ?? "";
+  // Откуда пришёл человек: с конфигуратора, с конкретной услуги,
+  // с карточки ПК и т.д. — показываем как бейдж и отправляем в заявке
+  const category = searchParams.get("category") ?? "";
 
   const hasConfiguratorData = Boolean(
     prefillPurpose || prefillResolution || prefillPriority,
@@ -69,6 +70,7 @@ function RequestForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
+          category: category || undefined,
           configuration: hasConfiguratorData
             ? {
                 purpose: prefillPurpose || undefined,
@@ -100,7 +102,13 @@ function RequestForm() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="font-display text-3xl font-semibold">
+      {category && (
+        <span className="inline-block rounded border border-accent px-2 py-1 font-mono text-xs text-accent">
+          {category}
+        </span>
+      )}
+
+      <h1 className="mt-3 font-display text-3xl font-semibold">
         Получить расчёт
       </h1>
       <p className="mt-3 text-muted">

@@ -90,7 +90,7 @@ export default function ConfiguratorPage() {
     setLoading(false);
   }
 
-  const requestHref = `/request?purpose=${answers.purpose}&budget=${answers.budget}&resolution=${answers.resolution}&priority=${answers.priority}`;
+  const requestHref = `/request?category=${encodeURIComponent("Конфигуратор")}&purpose=${answers.purpose}&budget=${answers.budget}&resolution=${answers.resolution}&priority=${answers.priority}`;
 
   return (
     <div className="min-h-screen bg-ink">

@@ -178,6 +178,7 @@ export type Lead = {
   contact: string;
   budget: string | null;
   purpose: string | null;
+  category: string | null;
   status: string;
   comment: string | null;
   createdAt: string;

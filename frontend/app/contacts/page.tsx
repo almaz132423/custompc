@@ -31,7 +31,12 @@ export default function ContactsPage() {
       const res = await fetch(`${API_URL}/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, contact, comment }),
+        body: JSON.stringify({
+          name,
+          contact,
+          comment,
+          category: "Общий вопрос",
+        }),
       });
       if (!res.ok) throw new Error("request failed");
       setStatus("success");

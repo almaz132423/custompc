@@ -15,6 +15,7 @@ export class LeadsService {
         budget: dto.budget || undefined,
         purpose: dto.purpose,
         comment: dto.comment,
+        category: dto.category,
         configuration: dto.configuration as Prisma.InputJsonValue | undefined,
       },
     });
