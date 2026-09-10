@@ -1,16 +1,20 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Разрешаем запросы с фронтенда (раздел 4.5 ТЗ — frontend и backend на разных портах)
+  app.use(cookieParser());
+
+  // Разрешаем запросы с фронтенда и передачу cookie (для авторизации)
   app.enableCors({
     origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    credentials: true,
   });
 
-  // Проверяем данные форм по правилам из DTO (например create-lead.dto.ts)
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

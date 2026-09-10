@@ -121,3 +121,77 @@ const PRIORITY_LABELS: Record<string, string> = {
 export function priorityLabel(priority: string): string {
   return PRIORITY_LABELS[priority] ?? priority;
 }
+
+// ---------- Авторизация (раздел 4.5, 32 ТЗ) ----------
+
+export type AdminUser = {
+  sub: string;
+  email: string;
+  role: "ADMIN" | "MANAGER";
+};
+
+export async function login(
+  email: string,
+  password: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      return { ok: false, message: data?.message ?? "Не удалось войти" };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Backend недоступен" };
+  }
+}
+
+export async function logout(): Promise<void> {
+  await fetch(`${API_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  }).catch(() => {});
+}
+
+export async function getMe(): Promise<AdminUser | null> {
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type Lead = {
+  id: string;
+  name: string;
+  contact: string;
+  budget: string | null;
+  purpose: string | null;
+  status: string;
+  comment: string | null;
+  createdAt: string;
+};
+
+export async function getLeads(): Promise<Lead[]> {
+  try {
+    const res = await fetch(`${API_URL}/leads`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
