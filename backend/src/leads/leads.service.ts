@@ -41,6 +41,11 @@ export class LeadsService {
   findAll() {
     return this.prisma.lead.findMany({
       orderBy: { createdAt: 'desc' },
+      include: {
+        pcBuild: {
+          select: { id: true, name: true, slug: true, price: true },
+        },
+      },
     });
   }
 }
