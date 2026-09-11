@@ -180,6 +180,12 @@ export type Lead = {
   purpose: string | null;
   category: string | null;
   pcBuildId: string | null;
+  pcBuild: {
+    id: string;
+    name: string;
+    slug: string;
+    price: string;
+  } | null;
   status: string;
   comment: string | null;
   createdAt: string;
