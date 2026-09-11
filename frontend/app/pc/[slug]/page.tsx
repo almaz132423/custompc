@@ -89,7 +89,7 @@ export default async function PcBuildPage({
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href={`/request?category=${encodeURIComponent("Покупка ПК")}&purpose=${build.purpose}&budget=${build.price}`}
+                href={`/request?category=${encodeURIComponent("Покупка ПК")}&pcBuildId=${encodeURIComponent(build.id)}&purpose=${build.purpose}&budget=${build.price}`}
                 className="rounded-md bg-accent px-6 py-3 font-sans text-sm font-medium text-ink transition-colors hover:bg-accent-hover"
               >
                 Заказать
@@ -118,27 +118,3 @@ export default async function PcBuildPage({
             <h2 className="font-display text-xl font-semibold">
               Комплектующие
             </h2>
-            <div className="mt-5 divide-y divide-border border-t border-border">
-              {build.components.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-3 font-sans text-sm"
-                >
-                  <span className="text-muted">
-                    {item.component.category?.name ?? "Компонент"}
-                  </span>
-                  <span className="font-mono">
-                    {item.component.manufacturer} {item.component.model}
-                    {item.quantity > 1 ? ` × ${item.quantity}` : ""}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-
-      <SiteFooter />
-    </div>
-  );
-}
