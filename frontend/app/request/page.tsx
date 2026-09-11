@@ -145,7 +145,7 @@ function RequestForm() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="mt-10 flex flex-col gap-5"
+        className="mt-10 flex flex-col gap-6"
       >
         <div>
           <label className="block font-mono text-xs text-muted">Имя *</label>
@@ -182,7 +182,7 @@ function RequestForm() {
           />
         </div>
 
-        <div>
+        <div className="relative z-10 mb-2">
           <label className="block font-mono text-xs text-muted">
             Назначение
           </label>
@@ -213,7 +213,7 @@ function RequestForm() {
         <button
           type="submit"
           disabled={status === "sending"}
-          className="mt-4 rounded-md bg-accent px-6 py-3 font-sans text-sm font-medium text-ink transition-colors hover:bg-accent-hover disabled:opacity-60"
+          className="relative z-0 mt-2 rounded-md bg-accent px-6 py-3 font-sans text-sm font-medium text-ink transition-colors hover:bg-accent-hover disabled:opacity-60"
         >
           {status === "sending" ? "Отправляем..." : "Получить расчёт"}
         </button>
