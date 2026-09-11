@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { getPcBuildBySlug, type PCBuildDetail } from "@/lib/api";
 
 const PURPOSE_OPTIONS = [
   { value: "GAMES", label: "Игры" },
@@ -37,9 +38,21 @@ function RequestForm() {
   const prefillBudget = searchParams.get("budget") ?? "";
   const prefillResolution = searchParams.get("resolution") ?? "";
   const prefillPriority = searchParams.get("priority") ?? "";
-  // Откуда пришёл человек: с конфигуратора, с конкретной услуги,
-  // с карточки ПК и т.д. — показываем как бейдж и отправляем в заявке
+  const pcBuildId = searchParams.get("pcBuildId") ?? "";
+  const pcBuildSlug = searchParams.get("pcBuildSlug") ?? "";
   const category = searchParams.get("category") ?? "";
+
+  const [selectedBuild, setSelectedBuild] = useState<PCBuildDetail | null>(null);
+
+  useEffect(() => {
+    if (!pcBuildSlug) return;
+
+    getPcBuildBySlug(pcBuildSlug).then((build) => {
+      if (build && build.id === pcBuildId) {
+        setSelectedBuild(build);
+      }
+    });
+  }, [pcBuildId, pcBuildSlug]);
 
   const hasConfiguratorData = Boolean(
     prefillPurpose || prefillResolution || prefillPriority,
@@ -71,6 +84,7 @@ function RequestForm() {
         body: JSON.stringify({
           ...values,
           category: category || undefined,
+          pcBuildId: pcBuildId || undefined,
           configuration: hasConfiguratorData
             ? {
                 purpose: prefillPurpose || undefined,
@@ -102,6 +116,18 @@ function RequestForm() {
 
   return (
     <div className="mx-auto max-w-xl">
+      {selectedBuild && (
+        <div className="mb-6 rounded-md border border-accent bg-surface p-4">
+          <p className="font-mono text-xs text-muted">Выбранный ПК</p>
+          <p className="mt-1 font-display text-lg font-semibold">
+            {selectedBuild.name}
+          </p>
+          <p className="mt-1 font-mono text-sm text-accent">
+            {selectedBuild.price} ₽
+          </p>
+        </div>
+      )}
+
       {category && (
         <span className="inline-block rounded border border-accent px-2 py-1 font-mono text-xs text-accent">
           {category}
@@ -148,9 +174,7 @@ function RequestForm() {
         </div>
 
         <div>
-          <label className="block font-mono text-xs text-muted">
-            Бюджет
-          </label>
+          <label className="block font-mono text-xs text-muted">Бюджет</label>
           <input
             {...register("budget")}
             placeholder="Например, 150000"

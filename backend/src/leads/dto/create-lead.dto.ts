@@ -27,6 +27,11 @@ export class CreateLeadDto {
   @IsString()
   category?: string;
 
+  // ID готовой сборки, если заявка создана из карточки ПК.
+  @IsOptional()
+  @IsString()
+  pcBuildId?: string;
+
   // Снапшот результата конфигуратора (раздел 22 ТЗ, поле "Конфигурация")
   @IsOptional()
   @IsObject()
