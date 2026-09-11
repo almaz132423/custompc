@@ -118,3 +118,27 @@ export default async function PcBuildPage({
             <h2 className="font-display text-xl font-semibold">
               Комплектующие
             </h2>
+            <div className="mt-5 divide-y divide-border border-t border-border">
+              {build.components.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between py-3 font-sans text-sm"
+                >
+                  <span className="text-muted">
+                    {item.component.category?.name ?? "Компонент"}
+                  </span>
+                  <span className="font-mono">
+                    {item.component.manufacturer} {item.component.model}
+                    {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
+}
