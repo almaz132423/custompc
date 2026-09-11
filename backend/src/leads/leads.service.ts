@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
@@ -7,7 +7,22 @@ import { CreateLeadDto } from './dto/create-lead.dto.js';
 export class LeadsService {
   constructor(private prisma: PrismaService) {}
 
-  create(dto: CreateLeadDto) {
+  async create(dto: CreateLeadDto) {
+    let pcBuildId: string | undefined;
+
+    if (dto.pcBuildId) {
+      const build = await this.prisma.pCBuild.findUnique({
+        where: { id: dto.pcBuildId },
+        select: { id: true, status: true },
+      });
+
+      if (!build || build.status !== 'AVAILABLE') {
+        throw new BadRequestException('Выбранная сборка ПК недоступна');
+      }
+
+      pcBuildId = build.id;
+    }
+
     return this.prisma.lead.create({
       data: {
         name: dto.name,
@@ -16,6 +31,7 @@ export class LeadsService {
         purpose: dto.purpose,
         comment: dto.comment,
         category: dto.category,
+        pcBuildId,
         configuration: dto.configuration as Prisma.InputJsonValue | undefined,
       },
     });
