@@ -179,6 +179,7 @@ export type Lead = {
   budget: string | null;
   purpose: string | null;
   category: string | null;
+  pcBuildId: string | null;
   status: string;
   comment: string | null;
   createdAt: string;
