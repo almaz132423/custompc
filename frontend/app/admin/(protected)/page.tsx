@@ -56,10 +56,8 @@ export default function AdminDashboardPage() {
                   <td className="px-4 py-3 font-mono">{lead.contact}</td>
                   <td className="px-4 py-3">{lead.category ?? "—"}</td>
                   <td className="px-4 py-3">
-                    {lead.pcBuildId ? (
-                      <span className="font-mono text-xs" title={lead.pcBuildId}>
-                        ПК выбран
-                      </span>
+                    {lead.pcBuild ? (
+                      <LinkToBuild slug={lead.pcBuild.slug} name={lead.pcBuild.name} />
                     ) : (
                       "—"
                     )}
@@ -82,5 +80,16 @@ export default function AdminDashboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function LinkToBuild({ slug, name }: { slug: string; name: string }) {
+  return (
+    <a
+      href={`/pc/${encodeURIComponent(slug)}`}
+      className="text-accent underline-offset-2 hover:underline"
+    >
+      {name}
+    </a>
   );
 }
