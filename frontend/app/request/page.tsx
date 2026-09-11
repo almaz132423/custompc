@@ -37,8 +37,7 @@ function RequestForm() {
   const prefillBudget = searchParams.get("budget") ?? "";
   const prefillResolution = searchParams.get("resolution") ?? "";
   const prefillPriority = searchParams.get("priority") ?? "";
-  // Откуда пришёл человек: с конфигуратора, с конкретной услуги,
-  // с карточки ПК и т.д. — показываем как бейдж и отправляем в заявке
+  const pcBuildId = searchParams.get("pcBuildId") ?? "";
   const category = searchParams.get("category") ?? "";
 
   const hasConfiguratorData = Boolean(
@@ -71,6 +70,7 @@ function RequestForm() {
         body: JSON.stringify({
           ...values,
           category: category || undefined,
+          pcBuildId: pcBuildId || undefined,
           configuration: hasConfiguratorData
             ? {
                 purpose: prefillPurpose || undefined,
@@ -148,9 +148,7 @@ function RequestForm() {
         </div>
 
         <div>
-          <label className="block font-mono text-xs text-muted">
-            Бюджет
-          </label>
+          <label className="block font-mono text-xs text-muted">Бюджет</label>
           <input
             {...register("budget")}
             placeholder="Например, 150000"
