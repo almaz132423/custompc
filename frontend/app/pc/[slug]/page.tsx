@@ -89,7 +89,7 @@ export default async function PcBuildPage({
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href={`/request?category=${encodeURIComponent("Покупка ПК")}&pcBuildId=${encodeURIComponent(build.id)}&purpose=${build.purpose}&budget=${build.price}`}
+                href={`/request?category=${encodeURIComponent("Покупка ПК")}&pcBuildId=${encodeURIComponent(build.id)}&pcBuildSlug=${encodeURIComponent(build.slug)}&purpose=${build.purpose}&budget=${build.price}`}
                 className="rounded-md bg-accent px-6 py-3 font-sans text-sm font-medium text-ink transition-colors hover:bg-accent-hover"
               >
                 Заказать
