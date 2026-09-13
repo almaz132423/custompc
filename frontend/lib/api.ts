@@ -6,6 +6,7 @@ export type PCBuild = {
   name: string;
   description: string | null;
   price: string;
+  status?: "AVAILABLE" | "HIDDEN" | "SOLD";
   purpose: string;
   resolution: string | null;
   warrantyMonths: number | null;
@@ -33,303 +34,76 @@ export async function getPcBuilds(): Promise<PCBuild[]> {
     const res = await fetch(`${API_URL}/pc-builds`, { cache: "no-store" });
     if (!res.ok) return [];
     return res.json();
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
-export async function getPcBuildBySlug(
-  slug: string,
-): Promise<PCBuildDetail | null> {
+export async function getPcBuildBySlug(slug: string): Promise<PCBuildDetail | null> {
   try {
-    const res = await fetch(`${API_URL}/pc-builds/${slug}`, {
-      cache: "no-store",
-    });
+    const res = await fetch(`${API_URL}/pc-builds/${slug}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-export type RecommendParams = {
-  purpose?: string;
-  budget?: string;
-  resolution?: string;
-  priority?: string;
-};
+export type RecommendParams = { purpose?: string; budget?: string; resolution?: string; priority?: string };
 
-export async function getRecommendation(
-  params: RecommendParams,
-): Promise<PCBuild | null> {
+export async function getRecommendation(params: RecommendParams): Promise<PCBuild | null> {
   try {
-    const query = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][],
-    );
-    const res = await fetch(`${API_URL}/configurator/recommend?${query.toString()}`, {
-      cache: "no-store",
-    });
+    const query = new URLSearchParams(Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][]);
+    const res = await fetch(`${API_URL}/configurator/recommend?${query.toString()}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-export function formatPrice(price: string): string {
-  const value = Number(price);
-  return new Intl.NumberFormat("ru-RU").format(value) + " ₽";
-}
+export function formatPrice(price: string): string { return new Intl.NumberFormat("ru-RU").format(Number(price)) + " ₽"; }
+const PURPOSE_LABELS: Record<string, string> = { GAMES: "Игры", WORK: "Работа", MONTAGE: "Монтаж", THREE_D: "3D", STREAMING: "Стриминг", AI: "AI", UNIVERSAL: "Универсальный" };
+export function purposeLabel(purpose: string): string { return PURPOSE_LABELS[purpose] ?? purpose; }
+const RESOLUTION_LABELS: Record<string, string> = { R1080P: "1080p", R1440P: "1440p", R4K: "4K" };
+export function resolutionLabel(resolution: string | null): string | null { return resolution ? RESOLUTION_LABELS[resolution] ?? resolution : null; }
+const PRIORITY_LABELS: Record<string, string> = { MAX_FPS: "Максимум FPS", PRICE_PERFORMANCE: "Цена/производительность", SILENCE: "Тишина", APPEARANCE: "Внешний вид", UPGRADABILITY: "Возможность апгрейда" };
+export function priorityLabel(priority: string): string { return PRIORITY_LABELS[priority] ?? priority; }
 
-const PURPOSE_LABELS: Record<string, string> = {
-  GAMES: "Игры",
-  WORK: "Работа",
-  MONTAGE: "Монтаж",
-  THREE_D: "3D",
-  STREAMING: "Стриминг",
-  AI: "AI",
-  UNIVERSAL: "Универсальный",
-};
-
-export function purposeLabel(purpose: string): string {
-  return PURPOSE_LABELS[purpose] ?? purpose;
-}
-
-const RESOLUTION_LABELS: Record<string, string> = {
-  R1080P: "1080p",
-  R1440P: "1440p",
-  R4K: "4K",
-};
-
-export function resolutionLabel(resolution: string | null): string | null {
-  if (!resolution) return null;
-  return RESOLUTION_LABELS[resolution] ?? resolution;
-}
-
-const PRIORITY_LABELS: Record<string, string> = {
-  MAX_FPS: "Максимум FPS",
-  PRICE_PERFORMANCE: "Цена/производительность",
-  SILENCE: "Тишина",
-  APPEARANCE: "Внешний вид",
-  UPGRADABILITY: "Возможность апгрейда",
-};
-
-export function priorityLabel(priority: string): string {
-  return PRIORITY_LABELS[priority] ?? priority;
-}
-
-// ---------- Авторизация (раздел 4.5, 32 ТЗ) ----------
-
-export type AdminUser = {
-  sub: string;
-  email: string;
-  role: "ADMIN" | "MANAGER";
-};
-
-export async function login(
-  email: string,
-  password: string,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+export type AdminUser = { sub: string; email: string; role: "ADMIN" | "MANAGER" };
+export async function login(email: string, password: string): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
-    const res = await fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      return { ok: false, message: data?.message ?? "Не удалось войти" };
-    }
+    const res = await fetch(`${API_URL}/auth/login`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+    if (!res.ok) { const data = await res.json().catch(() => null); return { ok: false, message: data?.message ?? "Не удалось войти" }; }
     return { ok: true };
-  } catch {
-    return { ok: false, message: "Backend недоступен" };
-  }
+  } catch { return { ok: false, message: "Backend недоступен" }; }
 }
-
-export async function logout(): Promise<void> {
-  await fetch(`${API_URL}/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-  }).catch(() => {});
-}
-
+export async function logout(): Promise<void> { await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => {}); }
 export async function getMe(): Promise<AdminUser | null> {
-  try {
-    const res = await fetch(`${API_URL}/auth/me`, {
-      credentials: "include",
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.user ?? null;
-  } catch {
-    return null;
-  }
+  try { const res = await fetch(`${API_URL}/auth/me`, { credentials: "include", cache: "no-store" }); if (!res.ok) return null; const data = await res.json(); return data.user ?? null; } catch { return null; }
 }
 
-export type Lead = {
-  id: string;
-  name: string;
-  contact: string;
-  budget: string | null;
-  purpose: string | null;
-  category: string | null;
-  pcBuildId: string | null;
-  pcBuild: {
-    id: string;
-    name: string;
-    slug: string;
-    price: string;
-  } | null;
-  status: string;
-  comment: string | null;
-  createdAt: string;
-};
+export type Lead = { id: string; name: string; contact: string; budget: string | null; purpose: string | null; category: string | null; pcBuildId: string | null; pcBuild: { id: string; name: string; slug: string; price: string } | null; status: string; comment: string | null; createdAt: string };
+export async function getLeads(): Promise<Lead[]> { try { const res = await fetch(`${API_URL}/leads`, { credentials: "include", cache: "no-store" }); if (!res.ok) return []; return res.json(); } catch { return []; } }
 
-export async function getLeads(): Promise<Lead[]> {
-  try {
-    const res = await fetch(`${API_URL}/leads`, {
-      credentials: "include",
-      cache: "no-store",
-    });
-    if (!res.ok) return [];
-    return res.json();
-  } catch {
-    return [];
-  }
-}
+export type ComponentCategory = { id: string; code: string; name: string };
+export type Component = { id: string; categoryId: string; manufacturer: string; model: string; price: string; specs: unknown; imageUrl: string | null; inStock: boolean; compatibility: unknown; category: ComponentCategory };
+export type ComponentInput = { categoryId: string; manufacturer: string; model: string; price: string; specs?: unknown; imageUrl?: string | null; inStock?: boolean; compatibility?: unknown };
+export async function getComponentCategories(): Promise<ComponentCategory[]> { const res = await fetch(`${API_URL}/components/categories`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error("Не удалось загрузить категории"); return res.json(); }
+export async function getComponents(categoryId?: string): Promise<Component[]> { const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : ""; const res = await fetch(`${API_URL}/components${query}`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error("Не удалось загрузить комплектующие"); return res.json(); }
+export async function createComponent(input: ComponentInput): Promise<Component> { const res = await fetch(`${API_URL}/components`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать комплектующее")); return res.json(); }
+export async function updateComponent(id: string, input: Partial<ComponentInput>): Promise<Component> { const res = await fetch(`${API_URL}/components/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить комплектующее")); return res.json(); }
+export async function deleteComponent(id: string): Promise<void> { const res = await fetch(`${API_URL}/components/${id}`, { method: "DELETE", credentials: "include" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее")); }
 
-// ---------- Комплектующие (админка) ----------
+export type AdminBuildComponent = { id: string; quantity: number; component: Component };
+export type AdminBuild = PCBuild & { components: AdminBuildComponent[] };
+export async function getAdminBuilds(): Promise<AdminBuild[]> { const res = await fetch(`${API_URL}/pc-build-components/builds`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить сборки")); return res.json(); }
+export async function setBuildComponent(buildId: string, componentId: string, quantity: number): Promise<AdminBuildComponent> { const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ componentId, quantity }) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить состав сборки")); return res.json(); }
+export async function removeBuildComponent(buildId: string, componentId: string): Promise<void> { const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components/${componentId}`, { method: "DELETE", credentials: "include" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее из сборки")); }
 
-export type ComponentCategory = {
-  id: string;
-  code: string;
-  name: string;
-};
+export type PcBuildInput = { slug: string; name: string; description?: string; price: string; status?: "AVAILABLE" | "HIDDEN" | "SOLD"; purpose: string; resolution?: string; warrantyMonths?: number; buildTimeDays?: number; avitoUrl?: string; categoryId?: string };
+export type PcBuildCategory = { id: string; name: string; slug: string };
+export type AdminPcBuild = PCBuild & { components: AdminBuildComponent[] };
+export async function getPcBuildCategories(): Promise<PcBuildCategory[]> { const res = await fetch(`${API_URL}/admin/pc-builds/categories`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить категории сборок")); return res.json(); }
+export async function getAdminPcBuilds(): Promise<AdminPcBuild[]> { const res = await fetch(`${API_URL}/admin/pc-builds`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить готовые сборки")); return res.json(); }
+export async function createPcBuild(input: PcBuildInput): Promise<AdminPcBuild> { const res = await fetch(`${API_URL}/admin/pc-builds`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать сборку")); return res.json(); }
+export async function updatePcBuild(id: string, input: Partial<PcBuildInput>): Promise<AdminPcBuild> { const res = await fetch(`${API_URL}/admin/pc-builds/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить сборку")); return res.json(); }
+export async function deletePcBuild(id: string): Promise<void> { const res = await fetch(`${API_URL}/admin/pc-builds/${id}`, { method: "DELETE", credentials: "include" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить сборку")); }
+export async function addPcBuildImage(id: string, url: string, sortOrder = 0) { const res = await fetch(`${API_URL}/admin/pc-builds/${id}/images`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url, sortOrder }) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось добавить изображение")); return res.json(); }
+export async function deletePcBuildImage(id: string, imageId: string): Promise<void> { const res = await fetch(`${API_URL}/admin/pc-builds/${id}/images/${imageId}`, { method: "DELETE", credentials: "include" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить изображение")); }
 
-export type Component = {
-  id: string;
-  categoryId: string;
-  manufacturer: string;
-  model: string;
-  price: string;
-  specs: unknown;
-  imageUrl: string | null;
-  inStock: boolean;
-  compatibility: unknown;
-  category: ComponentCategory;
-};
-
-export type ComponentInput = {
-  categoryId: string;
-  manufacturer: string;
-  model: string;
-  price: string;
-  specs?: unknown;
-  imageUrl?: string | null;
-  inStock?: boolean;
-  compatibility?: unknown;
-};
-
-export async function getComponentCategories(): Promise<ComponentCategory[]> {
-  const res = await fetch(`${API_URL}/components/categories`, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Не удалось загрузить категории");
-  return res.json();
-}
-
-export async function getComponents(categoryId?: string): Promise<Component[]> {
-  const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
-  const res = await fetch(`${API_URL}/components${query}`, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error("Не удалось загрузить комплектующие");
-  return res.json();
-}
-
-export async function createComponent(input: ComponentInput): Promise<Component> {
-  const res = await fetch(`${API_URL}/components`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать комплектующее"));
-  return res.json();
-}
-
-export async function updateComponent(
-  id: string,
-  input: Partial<ComponentInput>,
-): Promise<Component> {
-  const res = await fetch(`${API_URL}/components/${id}`, {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить комплектующее"));
-  return res.json();
-}
-
-export async function deleteComponent(id: string): Promise<void> {
-  const res = await fetch(`${API_URL}/components/${id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее"));
-}
-
-// ---------- Состав готовых сборок (админка) ----------
-
-export type AdminBuildComponent = {
-  id: string;
-  quantity: number;
-  component: Component;
-};
-
-export type AdminBuild = PCBuild & {
-  components: AdminBuildComponent[];
-};
-
-export async function getAdminBuilds(): Promise<AdminBuild[]> {
-  const res = await fetch(`${API_URL}/pc-build-components/builds`, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить сборки"));
-  return res.json();
-}
-
-export async function setBuildComponent(
-  buildId: string,
-  componentId: string,
-  quantity: number,
-): Promise<AdminBuildComponent> {
-  const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ componentId, quantity }),
-  });
-  if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить состав сборки"));
-  return res.json();
-}
-
-export async function removeBuildComponent(buildId: string, componentId: string): Promise<void> {
-  const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components/${componentId}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-  if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее из сборки"));
-}
-
-async function getApiError(res: Response, fallback: string): Promise<string> {
-  const data = await res.json().catch(() => null);
-  const message = data?.message;
-  return Array.isArray(message) ? message.join(", ") : message ?? fallback;
-}
+async function getApiError(res: Response, fallback: string): Promise<string> { const data = await res.json().catch(() => null); const message = data?.message; return Array.isArray(message) ? message.join(", ") : message ?? fallback; }
