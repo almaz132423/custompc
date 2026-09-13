@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsNumberString, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class CreateComponentDto {
   @IsString()
