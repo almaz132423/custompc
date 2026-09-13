@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SetPcBuildComponentDto } from './dto/set-pc-build-component.dto.js';
+import { CompatibilityService } from './compatibility.service.js';
 
 const compositionInclude = {
   component: { include: { category: true } },
@@ -8,7 +9,10 @@ const compositionInclude = {
 
 @Injectable()
 export class PcBuildComponentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly compatibility: CompatibilityService,
+  ) {}
 
   findBuilds() {
     return this.prisma.pCBuild.findMany({
@@ -36,9 +40,15 @@ export class PcBuildComponentsService {
     return build;
   }
 
+  async validate(buildId: string) {
+    await this.findOne(buildId);
+    return this.compatibility.validateBuild(buildId);
+  }
+
   async setComponent(buildId: string, dto: SetPcBuildComponentDto) {
     await this.ensureBuild(buildId);
     await this.ensureComponent(dto.componentId);
+    await this.compatibility.assertComponentCanBeAdded(buildId, dto.componentId);
 
     return this.prisma.pCBuildComponent.upsert({
       where: { pcBuildId_componentId: { pcBuildId: buildId, componentId: dto.componentId } },
