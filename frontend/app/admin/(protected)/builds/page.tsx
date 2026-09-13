@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   formatPrice,
   getAdminBuilds,
+  getBuildCompatibility,
   getComponents,
   removeBuildComponent,
   setBuildComponent,
   type AdminBuild,
+  type CompatibilityResult,
   type Component,
 } from "@/lib/api";
 
@@ -17,7 +19,9 @@ export default function AdminBuildsPage() {
   const [selectedBuildId, setSelectedBuildId] = useState("");
   const [selectedComponentId, setSelectedComponentId] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [compatibility, setCompatibility] = useState<CompatibilityResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,6 +52,24 @@ export default function AdminBuildsPage() {
     load();
   }, []);
 
+  async function checkCompatibility() {
+    if (!selectedBuildId) return;
+    setChecking(true);
+    setError("");
+    try {
+      setCompatibility(await getBuildCompatibility(selectedBuildId));
+    } catch (err) {
+      setCompatibility(null);
+      setError(err instanceof Error ? err.message : "Не удалось проверить совместимость");
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  useEffect(() => {
+    if (selectedBuildId) checkCompatibility();
+  }, [selectedBuildId]);
+
   async function addComponent() {
     const count = Number(quantity);
     if (!selectedBuildId || !selectedComponentId || !Number.isInteger(count) || count < 1) {
@@ -62,8 +84,9 @@ export default function AdminBuildsPage() {
       await load();
       setSelectedComponentId("");
       setQuantity("1");
+      await checkCompatibility();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось сохранить состав");
+      setError(err instanceof Error ? err.message : "Не удалось сохранить состав сборки");
     } finally {
       setSaving(false);
     }
@@ -77,6 +100,7 @@ export default function AdminBuildsPage() {
     try {
       await removeBuildComponent(selectedBuildId, componentId);
       await load();
+      await checkCompatibility();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось удалить комплектующее");
     } finally {
@@ -89,7 +113,7 @@ export default function AdminBuildsPage() {
       <div>
         <h1 className="font-display text-2xl font-semibold">Состав сборок</h1>
         <p className="mt-2 text-sm text-muted">
-          Выберите готовую сборку и соберите её из компонентов базы.
+          Выберите готовую сборку и соберите её из компонентов базы. Несовместимые компоненты не будут добавлены.
         </p>
       </div>
 
@@ -132,6 +156,36 @@ export default function AdminBuildsPage() {
                   </p>
                 </div>
                 <span className="font-mono text-sm">{formatPrice(selectedBuild.price)}</span>
+              </div>
+
+              <div className="mt-6 rounded-md border border-border bg-black/5 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Проверка совместимости</p>
+                    {compatibility ? (
+                      <p className={`mt-1 text-sm ${compatibility.compatible ? "text-green-400" : "text-red-400"}`}>
+                        {compatibility.compatible ? "Сборка совместима" : `Найдено проблем: ${compatibility.issues.length}`}
+                      </p>
+                    ) : (
+                      <p className="mt-1 text-sm text-muted">Проверка ещё не выполнена</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={checkCompatibility}
+                    disabled={checking}
+                    className="rounded-md border border-border px-4 py-2 text-sm disabled:opacity-50"
+                  >
+                    {checking ? "Проверяем…" : "Проверить ещё раз"}
+                  </button>
+                </div>
+                {compatibility && !compatibility.compatible && (
+                  <ul className="mt-4 space-y-2 text-sm text-red-300">
+                    {compatibility.issues.map((issue, index) => (
+                      <li key={`${issue.type}-${index}`}>• {issue.message}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-[1fr_120px_auto]">

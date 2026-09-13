@@ -91,7 +91,10 @@ export async function deleteComponent(id: string): Promise<void> { const res = a
 
 export type AdminBuildComponent = { id: string; quantity: number; component: Component };
 export type AdminBuild = PCBuild & { components: AdminBuildComponent[] };
+export type CompatibilityIssue = { type: "PAIR" | "POWER" | "RULE"; message: string; componentIds?: string[] };
+export type CompatibilityResult = { compatible: boolean; buildId: string; issues: CompatibilityIssue[] };
 export async function getAdminBuilds(): Promise<AdminBuild[]> { const res = await fetch(`${API_URL}/pc-build-components/builds`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить сборки")); return res.json(); }
+export async function getBuildCompatibility(buildId: string): Promise<CompatibilityResult> { const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/compatibility`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось проверить совместимость")); return res.json(); }
 export async function setBuildComponent(buildId: string, componentId: string, quantity: number): Promise<AdminBuildComponent> { const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ componentId, quantity }) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить состав сборки")); return res.json(); }
 export async function removeBuildComponent(buildId: string, componentId: string): Promise<void> { const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components/${componentId}`, { method: "DELETE", credentials: "include" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее из сборки")); }
 
