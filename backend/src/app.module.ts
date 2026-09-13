@@ -7,6 +7,7 @@ import { PcBuildsModule } from './pc-builds/pc-builds.module.js';
 import { LeadsModule } from './leads/leads.module.js';
 import { ConfiguratorModule } from './configurator/configurator.module.js';
 import { ComponentsModule } from './components/components.module.js';
+import { PcBuildComponentsModule } from './pc-build-components/pc-build-components.module.js';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ComponentsModule } from './components/components.module.js';
     LeadsModule,
     ConfiguratorModule,
     ComponentsModule,
+    PcBuildComponentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
