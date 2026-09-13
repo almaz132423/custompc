@@ -18,6 +18,11 @@ export class PcBuildComponentsController {
     return this.service.findOne(buildId);
   }
 
+  @Get('builds/:buildId/compatibility')
+  validate(@Param('buildId') buildId: string) {
+    return this.service.validate(buildId);
+  }
+
   @Post('builds/:buildId/components')
   setComponent(@Param('buildId') buildId: string, @Body() dto: SetPcBuildComponentDto) {
     return this.service.setComponent(buildId, dto);
