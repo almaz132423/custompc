@@ -64,15 +64,11 @@ export async function getRecommendation(
 ): Promise<PCBuild | null> {
   try {
     const query = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => Boolean(v)) as [
-        string,
-        string,
-      ][],
+      Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][],
     );
-    const res = await fetch(
-      `${API_URL}/configurator/recommend?${query.toString()}`,
-      { cache: "no-store" },
-    );
+    const res = await fetch(`${API_URL}/configurator/recommend?${query.toString()}`, {
+      cache: "no-store",
+    });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -246,9 +242,7 @@ export async function getComponentCategories(): Promise<ComponentCategory[]> {
 }
 
 export async function getComponents(categoryId?: string): Promise<Component[]> {
-  const query = categoryId
-    ? `?categoryId=${encodeURIComponent(categoryId)}`
-    : "";
+  const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
   const res = await fetch(`${API_URL}/components${query}`, {
     credentials: "include",
     cache: "no-store",
@@ -288,6 +282,50 @@ export async function deleteComponent(id: string): Promise<void> {
     credentials: "include",
   });
   if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее"));
+}
+
+// ---------- Состав готовых сборок (админка) ----------
+
+export type AdminBuildComponent = {
+  id: string;
+  quantity: number;
+  component: Component;
+};
+
+export type AdminBuild = PCBuild & {
+  components: AdminBuildComponent[];
+};
+
+export async function getAdminBuilds(): Promise<AdminBuild[]> {
+  const res = await fetch(`${API_URL}/pc-build-components/builds`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить сборки"));
+  return res.json();
+}
+
+export async function setBuildComponent(
+  buildId: string,
+  componentId: string,
+  quantity: number,
+): Promise<AdminBuildComponent> {
+  const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ componentId, quantity }),
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить состав сборки"));
+  return res.json();
+}
+
+export async function removeBuildComponent(buildId: string, componentId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/pc-build-components/builds/${buildId}/components/${componentId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее из сборки"));
 }
 
 async function getApiError(res: Response, fallback: string): Promise<string> {

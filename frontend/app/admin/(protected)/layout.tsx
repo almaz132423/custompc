@@ -39,6 +39,7 @@ export default function AdminProtectedLayout({
             <nav className="flex items-center gap-4 text-sm text-muted">
               <Link href="/admin" className="hover:text-text">Заявки</Link>
               <Link href="/admin/components" className="hover:text-text">Комплектующие</Link>
+              <Link href="/admin/builds" className="hover:text-text">Состав сборок</Link>
             </nav>
           </div>
           <div className="flex items-center gap-4 font-sans text-sm text-muted">
