@@ -16,6 +16,20 @@
   --font-mono: var(--font-plex-mono), "IBM Plex Mono", monospace;
 }
 
+@utility admin-input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  background: var(--color-surface);
+  padding: 0.625rem 0.75rem;
+  color: var(--color-text);
+  outline: none;
+}
+
+@utility admin-input-focus {
+  border-color: var(--color-accent);
+}
+
 body {
   background-color: var(--color-ink);
   color: var(--color-text);
