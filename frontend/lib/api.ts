@@ -203,3 +203,95 @@ export async function getLeads(): Promise<Lead[]> {
     return [];
   }
 }
+
+// ---------- Комплектующие (админка) ----------
+
+export type ComponentCategory = {
+  id: string;
+  code: string;
+  name: string;
+};
+
+export type Component = {
+  id: string;
+  categoryId: string;
+  manufacturer: string;
+  model: string;
+  price: string;
+  specs: unknown;
+  imageUrl: string | null;
+  inStock: boolean;
+  compatibility: unknown;
+  category: ComponentCategory;
+};
+
+export type ComponentInput = {
+  categoryId: string;
+  manufacturer: string;
+  model: string;
+  price: string;
+  specs?: unknown;
+  imageUrl?: string | null;
+  inStock?: boolean;
+  compatibility?: unknown;
+};
+
+export async function getComponentCategories(): Promise<ComponentCategory[]> {
+  const res = await fetch(`${API_URL}/components/categories`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("Не удалось загрузить категории");
+  return res.json();
+}
+
+export async function getComponents(categoryId?: string): Promise<Component[]> {
+  const query = categoryId
+    ? `?categoryId=${encodeURIComponent(categoryId)}`
+    : "";
+  const res = await fetch(`${API_URL}/components${query}`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error("Не удалось загрузить комплектующие");
+  return res.json();
+}
+
+export async function createComponent(input: ComponentInput): Promise<Component> {
+  const res = await fetch(`${API_URL}/components`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать комплектующее"));
+  return res.json();
+}
+
+export async function updateComponent(
+  id: string,
+  input: Partial<ComponentInput>,
+): Promise<Component> {
+  const res = await fetch(`${API_URL}/components/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить комплектующее"));
+  return res.json();
+}
+
+export async function deleteComponent(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/components/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить комплектующее"));
+}
+
+async function getApiError(res: Response, fallback: string): Promise<string> {
+  const data = await res.json().catch(() => null);
+  const message = data?.message;
+  return Array.isArray(message) ? message.join(", ") : message ?? fallback;
+}
