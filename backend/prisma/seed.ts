@@ -28,9 +28,7 @@ async function main() {
       warrantyMonths: 12,
       buildTimeDays: 3,
       categoryId: gaming.id,
-      images: {
-        create: [{ url: 'https://placehold.co/600x400?text=PC+START', sortOrder: 0 }],
-      },
+      images: { create: [{ url: 'https://placehold.co/600x400?text=PC+START', sortOrder: 0 }] },
     },
   });
 
@@ -47,9 +45,7 @@ async function main() {
       warrantyMonths: 12,
       buildTimeDays: 4,
       categoryId: gaming.id,
-      images: {
-        create: [{ url: 'https://placehold.co/600x400?text=PC+GAMING', sortOrder: 0 }],
-      },
+      images: { create: [{ url: 'https://placehold.co/600x400?text=PC+GAMING', sortOrder: 0 }] },
     },
   });
 
@@ -66,9 +62,7 @@ async function main() {
       warrantyMonths: 24,
       buildTimeDays: 5,
       categoryId: universal.id,
-      images: {
-        create: [{ url: 'https://placehold.co/600x400?text=PC+PRO', sortOrder: 0 }],
-      },
+      images: { create: [{ url: 'https://placehold.co/600x400?text=PC+PRO', sortOrder: 0 }] },
     },
   });
 
@@ -89,9 +83,7 @@ async function main() {
     }),
   ));
 
-  const categoryByCode = Object.fromEntries(
-    categories.map((category) => [category.code, category]),
-  );
+  const categoryByCode = Object.fromEntries(categories.map((category) => [category.code, category]));
 
   async function component(
     categoryCode: keyof typeof categoryByCode,
@@ -102,56 +94,47 @@ async function main() {
     compatibility: Record<string, string | number>,
   ) {
     const category = categoryByCode[categoryCode];
-    const existing = await prisma.component.findFirst({
-      where: { categoryId: category.id, manufacturer, model },
-    });
-
-    if (existing) {
-      return existing;
-    }
-
-    return prisma.component.create({
-      data: {
-        categoryId: category.id,
-        manufacturer,
-        model,
-        price,
-        specs,
-        compatibility,
-      },
+    return prisma.component.upsert({
+      where: { id: `${category.id}-${manufacturer}-${model}` },
+      update: { specs, compatibility },
+      create: { categoryId: category.id, manufacturer, model, price, specs, compatibility },
+    }).catch(async () => {
+      const existing = await prisma.component.findFirst({ where: { categoryId: category.id, manufacturer, model } });
+      if (!existing) throw new Error(`Не удалось создать ${manufacturer} ${model}`);
+      return prisma.component.update({ where: { id: existing.id }, data: { specs, compatibility } });
     });
   }
 
   const [startCpu, startGpu, startBoard, startRam, startSsd, startPsu, startCase, startCooling] = await Promise.all([
     component('CPU', 'AMD', 'Ryzen 5 5600', 11500, { cores: 6, threads: 12 }, { socket: 'AM4' }),
-    component('GPU', 'NVIDIA', 'GeForce RTX 4060', 33000, { memoryGb: 8 }, { lengthMm: 250 }),
+    component('GPU', 'NVIDIA', 'GeForce RTX 4060', 33000, { memoryGb: 8 }, { lengthMm: 250, requiredPowerW: 550 }),
     component('MOTHERBOARD', 'MSI', 'B550M PRO-VDH', 9000, { memoryType: 'DDR4' }, { socket: 'AM4', ramType: 'DDR4', formFactor: 'mATX' }),
     component('RAM', 'Kingston', 'FURY Beast 16GB (2x8GB)', 4500, { capacityGb: 16, memoryType: 'DDR4' }, { ramType: 'DDR4', modules: 2 }),
     component('SSD', 'Kingston', 'NV2 1TB', 6500, { capacityGb: 1000, interface: 'NVMe' }, {}),
     component('PSU', 'DeepCool', 'PK600D', 5500, { powerW: 600 }, { powerW: 600 }),
-    component('CASE', 'DeepCool', 'MATREXX 40 3FS', 5000, { formFactor: 'mATX' }, { formFactor: 'mATX' }),
+    component('CASE', 'DeepCool', 'MATREXX 40 3FS', 5000, { formFactor: 'mATX' }, { formFactor: 'mATX', maxGpuLengthMm: 320 }),
     component('COOLING', 'DeepCool', 'AG400', 3000, { type: 'air' }, { socket: 'AM4' }),
   ]);
 
   const [gamingCpu, gamingGpu, gamingBoard, gamingRam, gamingSsd, gamingPsu, gamingCase, gamingCooling] = await Promise.all([
     component('CPU', 'AMD', 'Ryzen 5 7600', 18000, { cores: 6, threads: 12 }, { socket: 'AM5' }),
-    component('GPU', 'NVIDIA', 'GeForce RTX 4070', 70000, { memoryGb: 12 }, { lengthMm: 300 }),
+    component('GPU', 'NVIDIA', 'GeForce RTX 4070', 70000, { memoryGb: 12 }, { lengthMm: 300, requiredPowerW: 650 }),
     component('MOTHERBOARD', 'MSI', 'B650M GAMING PLUS WIFI', 18000, { memoryType: 'DDR5' }, { socket: 'AM5', ramType: 'DDR5', formFactor: 'mATX' }),
     component('RAM', 'Kingston', 'FURY Beast 32GB (2x16GB)', 8500, { capacityGb: 32, memoryType: 'DDR5' }, { ramType: 'DDR5', modules: 2 }),
     component('SSD', 'Kingston', 'KC3000 1TB', 9000, { capacityGb: 1000, interface: 'NVMe' }, {}),
     component('PSU', 'be quiet!', 'System Power 10 750W', 8000, { powerW: 750 }, { powerW: 750 }),
-    component('CASE', 'DeepCool', 'CH370', 7500, { formFactor: 'mATX' }, { formFactor: 'mATX' }),
+    component('CASE', 'DeepCool', 'CH370', 7500, { formFactor: 'mATX' }, { formFactor: 'mATX', maxGpuLengthMm: 320 }),
     component('COOLING', 'DeepCool', 'AK400', 4000, { type: 'air' }, { socket: 'AM5' }),
   ]);
 
   const [proCpu, proGpu, proBoard, proRam, proSsd, proPsu, proCase, proCooling] = await Promise.all([
     component('CPU', 'AMD', 'Ryzen 9 7900X', 40000, { cores: 12, threads: 24 }, { socket: 'AM5' }),
-    component('GPU', 'NVIDIA', 'GeForce RTX 4080 SUPER', 115000, { memoryGb: 16 }, { lengthMm: 310 }),
+    component('GPU', 'NVIDIA', 'GeForce RTX 4080 SUPER', 115000, { memoryGb: 16 }, { lengthMm: 310, requiredPowerW: 750 }),
     component('MOTHERBOARD', 'ASUS', 'TUF GAMING B650-PLUS WIFI', 22000, { memoryType: 'DDR5' }, { socket: 'AM5', ramType: 'DDR5', formFactor: 'ATX' }),
     component('RAM', 'Kingston', 'FURY Beast 64GB (2x32GB)', 17000, { capacityGb: 64, memoryType: 'DDR5' }, { ramType: 'DDR5', modules: 2 }),
     component('SSD', 'Samsung', '990 PRO 2TB', 17000, { capacityGb: 2000, interface: 'NVMe' }, {}),
     component('PSU', 'be quiet!', 'Pure Power 12 M 850W', 13000, { powerW: 850 }, { powerW: 850 }),
-    component('CASE', 'Fractal Design', 'Pop Air', 9000, { formFactor: 'ATX' }, { formFactor: 'ATX' }),
+    component('CASE', 'Fractal Design', 'Pop Air', 9000, { formFactor: 'ATX' }, { formFactor: 'ATX', maxGpuLengthMm: 405 }),
     component('COOLING', 'DeepCool', 'AK620', 7500, { type: 'air' }, { socket: 'AM5' }),
   ]);
 
@@ -164,18 +147,9 @@ async function main() {
   for (const [build, components] of buildComponents) {
     for (const item of components) {
       await prisma.pCBuildComponent.upsert({
-        where: {
-          pcBuildId_componentId: {
-            pcBuildId: build.id,
-            componentId: item.id,
-          },
-        },
+        where: { pcBuildId_componentId: { pcBuildId: build.id, componentId: item.id } },
         update: { quantity: 1 },
-        create: {
-          pcBuildId: build.id,
-          componentId: item.id,
-          quantity: 1,
-        },
+        create: { pcBuildId: build.id, componentId: item.id, quantity: 1 },
       });
     }
   }
