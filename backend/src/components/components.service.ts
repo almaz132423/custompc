@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateComponentDto } from './dto/create-component.dto.js';
 import { UpdateComponentDto } from './dto/update-component.dto.js';
@@ -90,10 +91,12 @@ export class ComponentsService {
       ...(dto.manufacturer !== undefined && { manufacturer: dto.manufacturer }),
       ...(dto.model !== undefined && { model: dto.model }),
       ...(dto.price !== undefined && { price: dto.price }),
-      ...(dto.specs !== undefined && { specs: dto.specs }),
+      ...(dto.specs !== undefined && { specs: dto.specs as Prisma.InputJsonValue }),
       ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       ...(dto.inStock !== undefined && { inStock: dto.inStock }),
-      ...(dto.compatibility !== undefined && { compatibility: dto.compatibility }),
+      ...(dto.compatibility !== undefined && {
+        compatibility: dto.compatibility as Prisma.InputJsonValue,
+      }),
     };
   }
 }
