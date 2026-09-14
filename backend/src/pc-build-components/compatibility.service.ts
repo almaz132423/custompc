@@ -22,38 +22,23 @@ export class CompatibilityService {
   async validateBuild(buildId: string) {
     const build = await this.prisma.pCBuild.findUnique({
       where: { id: buildId },
-      include: {
-        components: {
-          include: {
-            component: { include: { category: true } },
-          },
-        },
-      },
+      include: { components: { include: { component: { include: { category: true } } } } },
     });
-
     if (!build) throw new BadRequestException('Сборка не найдена');
 
-    const components = build.components.map((link) => ({
-      id: link.componentId,
-      ...link.component,
-    }));
-    const issues = await this.checkComponents(components);
+    const components = build.components.map((link) => ({ id: link.componentId, ...link.component }));
+    const issues = await this.validateComponents(components);
+    return { compatible: issues.length === 0, buildId, issues };
+  }
 
-    return {
-      compatible: issues.length === 0,
-      buildId,
-      issues,
-    };
+  async validateComponents(components: Array<ComponentForCompatibility & { id: string }>) {
+    return this.checkComponents(components);
   }
 
   async assertComponentCanBeAdded(buildId: string, componentId: string) {
     const build = await this.prisma.pCBuild.findUnique({
       where: { id: buildId },
-      include: {
-        components: {
-          include: { component: { include: { category: true } } },
-        },
-      },
+      include: { components: { include: { component: { include: { category: true } } } } },
     });
     if (!build) throw new BadRequestException('Сборка не найдена');
 
@@ -64,21 +49,15 @@ export class CompatibilityService {
     if (!component) throw new BadRequestException('Комплектующее не найдено');
 
     const components = [
-      ...build.components
-        .filter((link) => link.componentId !== componentId)
-        .map((link) => ({ id: link.componentId, ...link.component })),
+      ...build.components.filter((link) => link.componentId !== componentId).map((link) => ({ id: link.componentId, ...link.component })),
       { id: component.id, ...component },
     ];
     const issues = await this.checkComponents(components);
-
-    if (issues.length) {
-      throw new BadRequestException(issues.map((issue) => issue.message));
-    }
+    if (issues.length) throw new BadRequestException(issues.map((issue) => issue.message));
   }
 
   private async checkComponents(components: Array<ComponentForCompatibility & { id: string }>): Promise<CompatibilityIssue[]> {
     const issues: CompatibilityIssue[] = [];
-
     const byCategory = (code: string) => components.filter((item) => item.category.code === code);
     const cpu = byCategory('CPU')[0];
     const motherboard = byCategory('MOTHERBOARD')[0];
@@ -96,21 +75,13 @@ export class CompatibilityService {
     const gpuLength = this.numberValue(gpu?.compatibility, 'lengthMm');
     const maxGpuLength = this.numberValue(pcCase?.compatibility, 'maxGpuLengthMm');
     if (gpu && pcCase && gpuLength !== undefined && maxGpuLength !== undefined && gpuLength > maxGpuLength) {
-      issues.push({
-        type: 'PAIR',
-        message: `Видеокарта ${gpu.manufacturer} ${gpu.model} длиннее допустимой длины корпуса`,
-        componentIds: [gpu.id, pcCase.id],
-      });
+      issues.push({ type: 'PAIR', message: `Видеокарта ${gpu.manufacturer} ${gpu.model} длиннее допустимой длины корпуса`, componentIds: [gpu.id, pcCase.id] });
     }
 
     const gpuRequiredPower = this.numberValue(gpu?.compatibility, 'requiredPowerW');
     const psuPower = this.numberValue(psu?.compatibility, 'powerW');
     if (gpu && psu && gpuRequiredPower !== undefined && psuPower !== undefined && psuPower < gpuRequiredPower) {
-      issues.push({
-        type: 'POWER',
-        message: `Блок питания ${psu.manufacturer} ${psu.model} слабее рекомендуемой мощности для видеокарты`,
-        componentIds: [gpu.id, psu.id],
-      });
+      issues.push({ type: 'POWER', message: `Блок питания ${psu.manufacturer} ${psu.model} слабее рекомендуемой мощности для видеокарты`, componentIds: [gpu.id, psu.id] });
     }
 
     const activeRules = await this.prisma.compatibilityRule.findMany({ where: { isActive: true } });
@@ -118,17 +89,10 @@ export class CompatibilityService {
       const issue = this.evaluateRule(rule.rule, components, rule.description ?? rule.name);
       if (issue) issues.push(issue);
     }
-
     return issues;
   }
 
-  private matchField(
-    issues: CompatibilityIssue[],
-    left: (ComponentForCompatibility & { id: string }) | undefined,
-    right: (ComponentForCompatibility & { id: string }) | undefined,
-    field: string,
-    message: string,
-  ) {
+  private matchField(issues: CompatibilityIssue[], left: (ComponentForCompatibility & { id: string }) | undefined, right: (ComponentForCompatibility & { id: string }) | undefined, field: string, message: string) {
     if (!left || !right) return;
     const leftValue = this.stringValue(left.compatibility, field);
     const rightValue = this.stringValue(right.compatibility, field);
@@ -142,45 +106,24 @@ export class CompatibilityService {
     const condition = this.isRecord(ruleValue.if) ? ruleValue.if : null;
     const requires = this.isRecord(ruleValue.requires) ? ruleValue.requires : null;
     if (!condition || !requires) return null;
-
     const source = components.find((component) => this.matches(component, condition));
     if (!source) return null;
-
     const target = components.find((component) => this.matches(component, requires));
     if (target) return null;
-
     const requiredCategory = typeof requires.category === 'string' ? requires.category : 'требуемое комплектующее';
-    return {
-      type: 'RULE',
-      message: description || `Для ${source.manufacturer} ${source.model} требуется ${requiredCategory}`,
-      componentIds: [source.id],
-    };
+    return { type: 'RULE', message: description || `Для ${source.manufacturer} ${source.model} требуется ${requiredCategory}`, componentIds: [source.id] };
   }
 
   private matches(component: ComponentForCompatibility, condition: JsonRecord) {
     if (typeof condition.category === 'string' && component.category.code !== condition.category) return false;
     for (const [key, value] of Object.entries(condition)) {
-      if (key === 'category') continue;
-      if (this.value(component.compatibility, key) !== value) return false;
+      if (key !== 'category' && this.value(component.compatibility, key) !== value) return false;
     }
     return true;
   }
 
-  private value(data: unknown, key: string) {
-    return this.isRecord(data) ? data[key] : undefined;
-  }
-
-  private stringValue(data: unknown, key: string) {
-    const value = this.value(data, key);
-    return typeof value === 'string' ? value : undefined;
-  }
-
-  private numberValue(data: unknown, key: string) {
-    const value = this.value(data, key);
-    return typeof value === 'number' ? value : undefined;
-  }
-
-  private isRecord(value: unknown): value is JsonRecord {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-  }
+  private value(data: unknown, key: string) { return this.isRecord(data) ? data[key] : undefined; }
+  private stringValue(data: unknown, key: string) { const value = this.value(data, key); return typeof value === 'string' ? value : undefined; }
+  private numberValue(data: unknown, key: string) { const value = this.value(data, key); return typeof value === 'number' ? value : undefined; }
+  private isRecord(value: unknown): value is JsonRecord { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 }
