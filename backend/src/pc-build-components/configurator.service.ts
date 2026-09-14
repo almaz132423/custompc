@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CompatibilityService, type CompatibilityIssue } from './compatibility.service.js';
+import { CompatibilityService } from './compatibility.service.js';
 
 @Injectable()
 export class ConfiguratorService {
@@ -10,17 +10,12 @@ export class ConfiguratorService {
   ) {}
 
   async getCategories() {
-    return this.prisma.componentCategory.findMany({
-      orderBy: { name: 'asc' },
-    });
+    return this.prisma.componentCategory.findMany({ orderBy: { name: 'asc' } });
   }
 
   async getComponents(categoryId?: string) {
     return this.prisma.component.findMany({
-      where: {
-        inStock: true,
-        ...(categoryId ? { categoryId } : {}),
-      },
+      where: { inStock: true, ...(categoryId ? { categoryId } : {}) },
       include: { category: true },
       orderBy: [{ category: { name: 'asc' } }, { price: 'asc' }],
     });
@@ -37,15 +32,10 @@ export class ConfiguratorService {
       throw new BadRequestException('Одно или несколько выбранных комплектующих недоступны');
     }
 
-    const issues = await this.compatibility.validateComponents(components.map((component) => ({
-      id: component.id,
-      ...component,
-    })));
+    const issues = await this.compatibility.validateComponents(
+      components.map((component) => ({ id: component.id, ...component })),
+    );
 
-    return {
-      compatible: issues.length === 0,
-      componentIds: uniqueIds,
-      issues,
-    };
+    return { compatible: issues.length === 0, componentIds: uniqueIds, issues };
   }
 }
