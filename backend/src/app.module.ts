@@ -8,18 +8,7 @@ import { LeadsModule } from './leads/leads.module.js';
 import { ConfiguratorModule } from './configurator/configurator.module.js';
 import { ComponentsModule } from './components/components.module.js';
 import { PcBuildComponentsModule } from './pc-build-components/pc-build-components.module.js';
+import { CompatibilityRulesModule } from './compatibility-rules/compatibility-rules.module.js';
 
-@Module({
-  imports: [
-    PrismaModule,
-    AuthModule,
-    PcBuildsModule,
-    LeadsModule,
-    ConfiguratorModule,
-    ComponentsModule,
-    PcBuildComponentsModule,
-  ],
-  controllers: [AppController],
-  providers: [AppService],
-})
+@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule], controllers: [AppController], providers: [AppService] })
 export class AppModule {}
