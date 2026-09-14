@@ -3,102 +3,21 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const gaming = await prisma.category.upsert({
-    where: { slug: 'gaming' },
-    update: {},
-    create: { name: 'Игровые', slug: 'gaming' },
-  });
+  const gaming = await prisma.category.upsert({ where: { slug: 'gaming' }, update: {}, create: { name: 'Игровые', slug: 'gaming' } });
+  const universal = await prisma.category.upsert({ where: { slug: 'universal' }, update: {}, create: { name: 'Универсальные', slug: 'universal' } });
 
-  const universal = await prisma.category.upsert({
-    where: { slug: 'universal' },
-    update: {},
-    create: { name: 'Универсальные', slug: 'universal' },
-  });
-
-  const start = await prisma.pCBuild.upsert({
-    where: { slug: 'start' },
-    update: {},
-    create: {
-      slug: 'start',
-      name: 'ПК START',
-      description: 'Стартовый игровой ПК для 1080p',
-      price: 89990,
-      purpose: 'GAMES',
-      resolution: 'R1080P',
-      warrantyMonths: 12,
-      buildTimeDays: 3,
-      categoryId: gaming.id,
-      images: { create: [{ url: 'https://placehold.co/600x400?text=PC+START', sortOrder: 0 }] },
-    },
-  });
-
-  const gamingBuild = await prisma.pCBuild.upsert({
-    where: { slug: 'gaming' },
-    update: {},
-    create: {
-      slug: 'gaming',
-      name: 'ПК GAMING',
-      description: 'Игровой ПК для 1440p',
-      price: 149990,
-      purpose: 'GAMES',
-      resolution: 'R1440P',
-      warrantyMonths: 12,
-      buildTimeDays: 4,
-      categoryId: gaming.id,
-      images: { create: [{ url: 'https://placehold.co/600x400?text=PC+GAMING', sortOrder: 0 }] },
-    },
-  });
-
-  const pro = await prisma.pCBuild.upsert({
-    where: { slug: 'pro' },
-    update: {},
-    create: {
-      slug: 'pro',
-      name: 'ПК PRO',
-      description: 'Мощный ПК для 4K и требовательных задач',
-      price: 229990,
-      purpose: 'UNIVERSAL',
-      resolution: 'R4K',
-      warrantyMonths: 24,
-      buildTimeDays: 5,
-      categoryId: universal.id,
-      images: { create: [{ url: 'https://placehold.co/600x400?text=PC+PRO', sortOrder: 0 }] },
-    },
-  });
+  const start = await prisma.pCBuild.upsert({ where: { slug: 'start' }, update: {}, create: { slug: 'start', name: 'ПК START', description: 'Стартовый игровой ПК для 1080p', price: 89990, purpose: 'GAMES', resolution: 'R1080P', warrantyMonths: 12, buildTimeDays: 3, categoryId: gaming.id, images: { create: [{ url: 'https://placehold.co/600x400?text=PC+START', sortOrder: 0 }] } } });
+  const gamingBuild = await prisma.pCBuild.upsert({ where: { slug: 'gaming' }, update: {}, create: { slug: 'gaming', name: 'ПК GAMING', description: 'Игровой ПК для 1440p', price: 149990, purpose: 'GAMES', resolution: 'R1440P', warrantyMonths: 12, buildTimeDays: 4, categoryId: gaming.id, images: { create: [{ url: 'https://placehold.co/600x400?text=PC+GAMING', sortOrder: 0 }] } } });
+  const pro = await prisma.pCBuild.upsert({ where: { slug: 'pro' }, update: {}, create: { slug: 'pro', name: 'ПК PRO', description: 'Мощный ПК для 4K и требовательных задач', price: 229990, purpose: 'UNIVERSAL', resolution: 'R4K', warrantyMonths: 24, buildTimeDays: 5, categoryId: universal.id, images: { create: [{ url: 'https://placehold.co/600x400?text=PC+PRO', sortOrder: 0 }] } });
 
   const categories = await Promise.all([
-    ['CPU', 'Процессор'],
-    ['GPU', 'Видеокарта'],
-    ['MOTHERBOARD', 'Материнская плата'],
-    ['RAM', 'Оперативная память'],
-    ['SSD', 'SSD'],
-    ['PSU', 'Блок питания'],
-    ['CASE', 'Корпус'],
-    ['COOLING', 'Охлаждение'],
-  ].map(async ([code, name]) =>
-    prisma.componentCategory.upsert({
-      where: { code: code as any },
-      update: { name },
-      create: { code: code as any, name },
-    }),
-  ));
-
+    ['CPU', 'Процессор'], ['GPU', 'Видеокарта'], ['MOTHERBOARD', 'Материнская плата'], ['RAM', 'Оперативная память'], ['SSD', 'SSD'], ['PSU', 'Блок питания'], ['CASE', 'Корпус'], ['COOLING', 'Охлаждение'],
+  ].map(async ([code, name]) => prisma.componentCategory.upsert({ where: { code: code as any }, update: { name }, create: { code: code as any, name } })));
   const categoryByCode = Object.fromEntries(categories.map((category) => [category.code, category]));
 
-  async function component(
-    categoryCode: keyof typeof categoryByCode,
-    manufacturer: string,
-    model: string,
-    price: number,
-    specs: Record<string, string | number>,
-    compatibility: Record<string, string | number>,
-  ) {
+  async function component(categoryCode: keyof typeof categoryByCode, manufacturer: string, model: string, price: number, specs: Record<string, string | number>, compatibility: Record<string, string | number>) {
     const category = categoryByCode[categoryCode];
-    return prisma.component.upsert({
-      where: { id: `${category.id}-${manufacturer}-${model}` },
-      update: { specs, compatibility },
-      create: { categoryId: category.id, manufacturer, model, price, specs, compatibility },
-    }).catch(async () => {
+    return prisma.component.upsert({ where: { id: `${category.id}-${manufacturer}-${model}` }, update: { specs, compatibility }, create: { categoryId: category.id, manufacturer, model, price, specs, compatibility } }).catch(async () => {
       const existing = await prisma.component.findFirst({ where: { categoryId: category.id, manufacturer, model } });
       if (!existing) throw new Error(`Не удалось создать ${manufacturer} ${model}`);
       return prisma.component.update({ where: { id: existing.id }, data: { specs, compatibility } });
@@ -115,7 +34,6 @@ async function main() {
     component('CASE', 'DeepCool', 'MATREXX 40 3FS', 5000, { formFactor: 'mATX' }, { formFactor: 'mATX', maxGpuLengthMm: 320 }),
     component('COOLING', 'DeepCool', 'AG400', 3000, { type: 'air' }, { socket: 'AM4' }),
   ]);
-
   const [gamingCpu, gamingGpu, gamingBoard, gamingRam, gamingSsd, gamingPsu, gamingCase, gamingCooling] = await Promise.all([
     component('CPU', 'AMD', 'Ryzen 5 7600', 18000, { cores: 6, threads: 12 }, { socket: 'AM5' }),
     component('GPU', 'NVIDIA', 'GeForce RTX 4070', 70000, { memoryGb: 12 }, { lengthMm: 300, requiredPowerW: 650 }),
@@ -126,7 +44,6 @@ async function main() {
     component('CASE', 'DeepCool', 'CH370', 7500, { formFactor: 'mATX' }, { formFactor: 'mATX', maxGpuLengthMm: 320 }),
     component('COOLING', 'DeepCool', 'AK400', 4000, { type: 'air' }, { socket: 'AM5' }),
   ]);
-
   const [proCpu, proGpu, proBoard, proRam, proSsd, proPsu, proCase, proCooling] = await Promise.all([
     component('CPU', 'AMD', 'Ryzen 9 7900X', 40000, { cores: 12, threads: 24 }, { socket: 'AM5' }),
     component('GPU', 'NVIDIA', 'GeForce RTX 4080 SUPER', 115000, { memoryGb: 16 }, { lengthMm: 310, requiredPowerW: 750 }),
@@ -138,30 +55,17 @@ async function main() {
     component('COOLING', 'DeepCool', 'AK620', 7500, { type: 'air' }, { socket: 'AM5' }),
   ]);
 
-  const buildComponents = [
-    [start, [startCpu, startGpu, startBoard, startRam, startSsd, startPsu, startCase, startCooling]],
-    [gamingBuild, [gamingCpu, gamingGpu, gamingBoard, gamingRam, gamingSsd, gamingPsu, gamingCase, gamingCooling]],
-    [pro, [proCpu, proGpu, proBoard, proRam, proSsd, proPsu, proCase, proCooling]],
-  ] as const;
+  const buildComponents = [[start, [startCpu, startGpu, startBoard, startRam, startSsd, startPsu, startCase, startCooling]], [gamingBuild, [gamingCpu, gamingGpu, gamingBoard, gamingRam, gamingSsd, gamingPsu, gamingCase, gamingCooling]], [pro, [proCpu, proGpu, proBoard, proRam, proSsd, proPsu, proCase, proCooling]]] as const;
+  for (const [build, components] of buildComponents) for (const item of components) await prisma.pCBuildComponent.upsert({ where: { pcBuildId_componentId: { pcBuildId: build.id, componentId: item.id } }, update: { quantity: 1 }, create: { pcBuildId: build.id, componentId: item.id, quantity: 1 } });
 
-  for (const [build, components] of buildComponents) {
-    for (const item of components) {
-      await prisma.pCBuildComponent.upsert({
-        where: { pcBuildId_componentId: { pcBuildId: build.id, componentId: item.id } },
-        update: { quantity: 1 },
-        create: { pcBuildId: build.id, componentId: item.id, quantity: 1 },
-      });
-    }
-  }
+  const rules = [
+    { name: 'CPU AM5 требует материнскую плату AM5', description: 'Процессор с сокетом AM5 должен использовать материнскую плату AM5.', rule: { if: { category: 'CPU', socket: 'AM5' }, requires: { category: 'MOTHERBOARD', socket: 'AM5' } } },
+    { name: 'CPU AM4 требует материнскую плату AM4', description: 'Процессор с сокетом AM4 должен использовать материнскую плату AM4.', rule: { if: { category: 'CPU', socket: 'AM4' }, requires: { category: 'MOTHERBOARD', socket: 'AM4' } } },
+    { name: 'DDR5 требует совместимую RAM', description: 'Материнская плата DDR5 должна комплектоваться оперативной памятью DDR5.', rule: { if: { category: 'MOTHERBOARD', ramType: 'DDR5' }, requires: { category: 'RAM', ramType: 'DDR5' } } },
+  ];
+  for (const item of rules) await prisma.compatibilityRule.upsert({ where: { id: `seed-${item.name}` }, update: item, create: { id: `seed-${item.name}`, ...item } });
 
-  console.log('Тестовые данные и комплектующие добавлены');
+  console.log('Тестовые данные и правила совместимости добавлены');
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch((e) => { console.error(e); process.exit(1); }).finally(async () => { await prisma.$disconnect(); });
