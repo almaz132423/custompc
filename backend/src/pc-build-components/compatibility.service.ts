@@ -76,12 +76,18 @@ export class CompatibilityService {
     this.matchField(issues, cpu, cooling, 'socket', 'Охлаждение не поддерживает сокет процессора');
 
     const gpuLength = this.numberValue(gpu?.compatibility, 'lengthMm');
-    const maxGpuLength = this.numberValue(pcCase?.compatibility, 'maxGpuLengthMm');
+    const maxGpuLength = this.firstNumberValue(pcCase?.compatibility, ['maxGpuLengthMm', 'gpuLengthMm']);
     if (gpu && pcCase && gpuLength !== undefined && maxGpuLength !== undefined && gpuLength > maxGpuLength) {
       issues.push({ type: 'PAIR', message: `Видеокарта ${gpu.manufacturer} ${gpu.model} длиннее допустимой длины корпуса`, componentIds: [gpu.id, pcCase.id] });
     }
 
-    const gpuRequiredPower = this.numberValue(gpu?.compatibility, 'requiredPowerW');
+    const coolerHeight = this.numberValue(cooling?.compatibility, 'heightMm');
+    const maxCoolerHeight = this.numberValue(pcCase?.compatibility, 'coolerHeightMm');
+    if (cooling && pcCase && coolerHeight !== undefined && maxCoolerHeight !== undefined && coolerHeight > maxCoolerHeight) {
+      issues.push({ type: 'PAIR', message: `Кулер ${cooling.manufacturer} ${cooling.model} выше допустимой высоты корпуса`, componentIds: [cooling.id, pcCase.id] });
+    }
+
+    const gpuRequiredPower = this.firstNumberValue(gpu?.compatibility, ['requiredPowerW', 'powerW']);
     const psuPower = this.numberValue(psu?.compatibility, 'powerW');
     if (gpu && psu && gpuRequiredPower !== undefined && psuPower !== undefined && psuPower < gpuRequiredPower) {
       issues.push({ type: 'POWER', message: `Блок питания ${psu.manufacturer} ${psu.model} слабее рекомендуемой мощности для видеокарты`, componentIds: [gpu.id, psu.id] });
@@ -128,5 +134,12 @@ export class CompatibilityService {
   private value(data: unknown, key: string) { return this.isRecord(data) ? data[key] : undefined; }
   private stringValue(data: unknown, key: string) { const value = this.value(data, key); return typeof value === 'string' ? value : undefined; }
   private numberValue(data: unknown, key: string) { const value = this.value(data, key); return typeof value === 'number' ? value : undefined; }
+  private firstNumberValue(data: unknown, keys: string[]) {
+    for (const key of keys) {
+      const value = this.numberValue(data, key);
+      if (value !== undefined) return value;
+    }
+    return undefined;
+  }
   private isRecord(value: unknown): value is JsonRecord { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 }
