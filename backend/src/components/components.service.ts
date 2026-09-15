@@ -39,7 +39,7 @@ export class ComponentsService {
     await this.ensureCategory(dto.categoryId);
 
     return this.prisma.component.create({
-      data: this.toData(dto),
+      data: this.toCreateData(dto),
       include: { category: true },
     });
   }
@@ -53,7 +53,7 @@ export class ComponentsService {
 
     return this.prisma.component.update({
       where: { id },
-      data: this.toData(dto),
+      data: this.toUpdateData(dto),
       include: { category: true },
     });
   }
@@ -85,7 +85,22 @@ export class ComponentsService {
     }
   }
 
-  private toData(dto: CreateComponentDto | UpdateComponentDto) {
+  private toCreateData(dto: CreateComponentDto): Prisma.ComponentUncheckedCreateInput {
+    return {
+      categoryId: dto.categoryId,
+      manufacturer: dto.manufacturer,
+      model: dto.model,
+      price: dto.price,
+      ...(dto.specs !== undefined && { specs: dto.specs as Prisma.InputJsonValue }),
+      ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+      ...(dto.inStock !== undefined && { inStock: dto.inStock }),
+      ...(dto.compatibility !== undefined && {
+        compatibility: dto.compatibility as Prisma.InputJsonValue,
+      }),
+    };
+  }
+
+  private toUpdateData(dto: UpdateComponentDto): Prisma.ComponentUncheckedUpdateInput {
     return {
       ...(dto.categoryId !== undefined && { categoryId: dto.categoryId }),
       ...(dto.manufacturer !== undefined && { manufacturer: dto.manufacturer }),
