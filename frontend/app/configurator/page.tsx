@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { formatPrice, type Component, type ComponentCategory, type CompatibilityIssue } from "@/lib/api";
-import { getConfiguratorCategories, getConfiguratorComponents, validateConfigurator } from "@/lib/configurator-api";
+import { getCompatibleConfiguratorComponents, getConfiguratorCategories, getConfiguratorComponents, validateConfigurator, type CompatibleComponentsResponse } from "@/lib/configurator-api";
 
 const CATEGORY_ORDER = ["CPU", "MOTHERBOARD", "RAM", "GPU", "SSD", "PSU", "CASE", "COOLING"];
 const CATEGORY_LABELS: Record<string, string> = {
@@ -24,11 +24,15 @@ type Selection = Record<string, Component | undefined>;
 export default function ConfiguratorPage() {
   const [categories, setCategories] = useState<ComponentCategory[]>([]);
   const [components, setComponents] = useState<Component[]>([]);
+  const [availableComponents, setAvailableComponents] = useState<Component[]>([]);
+  const [excludedComponents, setExcludedComponents] = useState<CompatibleComponentsResponse["excluded"]>([]);
   const [selection, setSelection] = useState<Selection>({});
   const [activeCode, setActiveCode] = useState("CPU");
+  const [search, setSearch] = useState("");
   const [issues, setIssues] = useState<CompatibilityIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
+  const [filtering, setFiltering] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -47,7 +51,6 @@ export default function ConfiguratorPage() {
   );
 
   const activeCategory = orderedCategories.find((category) => category.code === activeCode) ?? orderedCategories[0];
-  const activeComponents = components.filter((component) => component.categoryId === activeCategory?.id);
   const selectedComponents = orderedCategories.map((category) => selection[category.code]).filter(Boolean) as Component[];
   const total = selectedComponents.reduce((sum, component) => sum + Number(component.price), 0);
   const completed = selectedComponents.length;
@@ -65,6 +68,32 @@ export default function ConfiguratorPage() {
     total: String(total),
   }));
   const requestHref = `/request?category=${encodeURIComponent("Конфигуратор")}&budget=${total}&configuration=${requestConfig}`;
+
+  useEffect(() => {
+    if (!activeCategory) return;
+    let cancelled = false;
+    setFiltering(true);
+    setSearch("");
+    getCompatibleConfiguratorComponents(activeCategory.id, selectedComponents.map((component) => component.id))
+      .then((result) => {
+        if (cancelled) return;
+        setAvailableComponents(result.components);
+        setExcludedComponents(result.excluded);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Не удалось подобрать совместимые комплектующие");
+      })
+      .finally(() => {
+        if (!cancelled) setFiltering(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeCategory?.id, selection]);
+
+  const filteredComponents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return availableComponents;
+    return availableComponents.filter((component) => `${component.manufacturer} ${component.model}`.toLowerCase().includes(query));
+  }, [availableComponents, search]);
 
   async function selectComponent(component: Component) {
     const nextSelection = { ...selection, [component.category.code]: component };
@@ -105,7 +134,7 @@ export default function ConfiguratorPage() {
         <div className="max-w-3xl">
           <p className="font-mono text-xs text-accent">CUSTOM PC</p>
           <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">Соберите ПК под себя</h1>
-          <p className="mt-4 text-muted">Выбирайте комплектующие по очереди. После каждого выбора сервер проверяет конфигурацию на совместимость.</p>
+          <p className="mt-4 text-muted">Выбирайте комплектующие по очереди. После каждого выбора конфигуратор оставляет только совместимые варианты.</p>
         </div>
 
         {error && <div className="mt-6 rounded-md border border-red-500/40 bg-red-500/5 p-4 text-sm text-red-300">{error}</div>}
@@ -134,10 +163,30 @@ export default function ConfiguratorPage() {
                   {selection[activeCategory.code] && <button onClick={() => clearSelection(activeCategory.code)} className="text-xs text-muted hover:text-text">Сбросить</button>}
                 </div>
 
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по производителю или модели" className="min-w-0 flex-1 rounded-md border border-border bg-surface px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-accent" />
+                  <div className="rounded-md border border-border px-4 py-3 text-xs text-muted sm:min-w-44">
+                    {filtering ? "Подбираем…" : `${filteredComponents.length} доступно`}
+                  </div>
+                </div>
+
+                {excludedComponents.length > 0 && (
+                  <details className="mt-4 rounded-md border border-border bg-surface p-4">
+                    <summary className="cursor-pointer text-sm">Почему часть вариантов скрыта? <span className="font-mono text-xs text-muted">{excludedComponents.length}</span></summary>
+                    <div className="mt-4 space-y-3">
+                      {excludedComponents.map((component) => (
+                        <div key={component.id} className="border-t border-border pt-3 first:border-0 first:pt-0">
+                          <p className="text-sm">{component.manufacturer} {component.model}</p>
+                          <ul className="mt-1 space-y-1 text-xs text-red-200">{component.reasons.map((reason) => <li key={reason}>• {reason}</li>)}</ul>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {activeComponents.map((component) => {
+                  {filteredComponents.map((component) => {
                     const selected = selection[component.category.code]?.id === component.id;
-                    const blocked = issues.some((issue) => issue.componentIds?.includes(component.id));
                     return (
                       <button key={component.id} onClick={() => selectComponent(component)} className={`rounded-md border p-4 text-left transition-colors ${selected ? "border-accent bg-accent-soft" : "border-border hover:border-accent"}`}>
                         <div className="flex items-start justify-between gap-3">
@@ -149,12 +198,14 @@ export default function ConfiguratorPage() {
                         </div>
                         <div className="mt-4 flex items-center justify-between font-mono text-sm">
                           <span className="text-accent">{formatPrice(component.price)}</span>
-                          {blocked && <span className="text-red-300">Проблема</span>}
+                          {component.inStock ? <span className="text-xs text-muted">В наличии</span> : null}
                         </div>
                       </button>
                     );
                   })}
                 </div>
+
+                {!filtering && filteredComponents.length === 0 && <div className="mt-5 rounded-md border border-border p-6 text-sm text-muted">Совместимых вариантов по этому запросу нет. Попробуйте изменить выбор или поиск.</div>}
 
                 <div className="mt-6 flex gap-3">
                   {orderedCategories.findIndex((category) => category.code === activeCategory.code) > 0 && (

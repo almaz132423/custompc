@@ -16,6 +16,14 @@ export class ConfiguratorController {
     return this.service.getComponents(categoryId);
   }
 
+  @Get('compatible-components')
+  getCompatibleComponents(
+    @Query('categoryId') categoryId: string,
+    @Query('selectedIds') selectedIds = '',
+  ) {
+    return this.service.getCompatibleComponents(categoryId, selectedIds.split(',').filter(Boolean));
+  }
+
   @Post('validate')
   validate(@Body() dto: ValidateComponentsDto) {
     return this.service.validate(dto.componentIds);

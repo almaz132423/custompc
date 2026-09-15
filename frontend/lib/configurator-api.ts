@@ -8,6 +8,11 @@ export type ConfiguratorValidation = {
   issues: CompatibilityIssue[];
 };
 
+export type CompatibleComponentsResponse = {
+  components: Component[];
+  excluded: { id: string; manufacturer: string; model: string; reasons: string[] }[];
+};
+
 export async function getConfiguratorCategories(): Promise<ComponentCategory[]> {
   const res = await fetch(`${API_URL}/configurator/categories`, { cache: "no-store" });
   if (!res.ok) throw new Error("Не удалось загрузить категории");
@@ -18,6 +23,17 @@ export async function getConfiguratorComponents(categoryId?: string): Promise<Co
   const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
   const res = await fetch(`${API_URL}/configurator/components${query}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Не удалось загрузить комплектующие");
+  return res.json();
+}
+
+export async function getCompatibleConfiguratorComponents(categoryId: string, selectedIds: string[]): Promise<CompatibleComponentsResponse> {
+  const query = new URLSearchParams({ categoryId, selectedIds: selectedIds.join(",") });
+  const res = await fetch(`${API_URL}/configurator/compatible-components?${query.toString()}`, { cache: "no-store" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const message = data?.message;
+    throw new Error(Array.isArray(message) ? message.join(", ") : message ?? "Не удалось подобрать совместимые комплектующие");
+  }
   return res.json();
 }
 
