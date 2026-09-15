@@ -2,11 +2,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CompatibilityService } from './compatibility.service.js';
 
-export type CompatibleComponentResult = {
-  components: Awaited<ReturnType<ConfiguratorService['getComponents']>>;
-  excluded: { id: string; manufacturer: string; model: string; reasons: string[] }[];
-};
-
 @Injectable()
 export class ConfiguratorService {
   constructor(
@@ -26,7 +21,7 @@ export class ConfiguratorService {
     });
   }
 
-  async getCompatibleComponents(categoryId: string, selectedIds: string[]): Promise<CompatibleComponentResult> {
+  async getCompatibleComponents(categoryId: string, selectedIds: string[]) {
     if (!categoryId) throw new BadRequestException('Категория не указана');
 
     const candidates = await this.getComponents(categoryId);
@@ -38,8 +33,8 @@ export class ConfiguratorService {
         })
       : [];
 
-    const excluded: CompatibleComponentResult['excluded'] = [];
-    const compatible = [] as Awaited<ReturnType<ConfiguratorService['getComponents']>>;
+    const excluded: { id: string; manufacturer: string; model: string; reasons: string[] }[] = [];
+    const compatible: typeof candidates = [];
 
     for (const candidate of candidates) {
       const selectedWithoutSameCategory = selected.filter((item) => item.categoryId !== candidate.categoryId);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { formatPrice, type Component, type ComponentCategory, type CompatibilityIssue } from "@/lib/api";
-import { getCompatibleConfiguratorComponents, getConfiguratorCategories, getConfiguratorComponents, validateConfigurator, type CompatibleComponentsResponse } from "@/lib/configurator-api";
+import { getCompatibleConfiguratorComponents, getConfiguratorCategories, validateConfigurator, type CompatibleComponentsResponse } from "@/lib/configurator-api";
 
 const CATEGORY_ORDER = ["CPU", "MOTHERBOARD", "RAM", "GPU", "SSD", "PSU", "CASE", "COOLING"];
 const CATEGORY_LABELS: Record<string, string> = {
@@ -23,7 +23,6 @@ type Selection = Record<string, Component | undefined>;
 
 export default function ConfiguratorPage() {
   const [categories, setCategories] = useState<ComponentCategory[]>([]);
-  const [components, setComponents] = useState<Component[]>([]);
   const [availableComponents, setAvailableComponents] = useState<Component[]>([]);
   const [excludedComponents, setExcludedComponents] = useState<CompatibleComponentsResponse["excluded"]>([]);
   const [selection, setSelection] = useState<Selection>({});
@@ -36,11 +35,8 @@ export default function ConfiguratorPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([getConfiguratorCategories(), getConfiguratorComponents()])
-      .then(([loadedCategories, loadedComponents]) => {
-        setCategories(loadedCategories.filter((category) => CATEGORY_ORDER.includes(category.code)));
-        setComponents(loadedComponents);
-      })
+    getConfiguratorCategories()
+      .then((loadedCategories) => setCategories(loadedCategories.filter((category) => CATEGORY_ORDER.includes(category.code))))
       .catch((err) => setError(err instanceof Error ? err.message : "Не удалось загрузить конфигуратор"))
       .finally(() => setLoading(false));
   }, []);
@@ -198,7 +194,7 @@ export default function ConfiguratorPage() {
                         </div>
                         <div className="mt-4 flex items-center justify-between font-mono text-sm">
                           <span className="text-accent">{formatPrice(component.price)}</span>
-                          {component.inStock ? <span className="text-xs text-muted">В наличии</span> : null}
+                          <span className="text-xs text-muted">В наличии</span>
                         </div>
                       </button>
                     );
