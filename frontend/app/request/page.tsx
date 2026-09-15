@@ -77,6 +77,9 @@ function RequestForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...values,
+          // Пустое значение селекта "Не важно" не должно отправляться как purpose: "".
+          // Backend принимает либо валидный Purpose, либо отсутствие поля.
+          purpose: values.purpose || undefined,
           category: category || undefined,
           pcBuildId: pcBuildId || undefined,
           configuration: hasConfiguratorData ? {
