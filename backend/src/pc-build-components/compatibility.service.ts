@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 
 type JsonRecord = Record<string, unknown>;
 type ComponentForCompatibility = {
+  id: string;
   manufacturer: string;
   model: string;
   compatibility: unknown;
@@ -26,12 +27,12 @@ export class CompatibilityService {
     });
     if (!build) throw new BadRequestException('Сборка не найдена');
 
-    const components = build.components.map((link) => ({ id: link.componentId, ...link.component }));
+    const components = build.components.map((link) => link.component);
     const issues = await this.validateComponents(components);
     return { compatible: issues.length === 0, buildId, issues };
   }
 
-  async validateComponents(components: Array<ComponentForCompatibility & { id: string }>) {
+  async validateComponents(components: ComponentForCompatibility[]) {
     return this.checkComponents(components);
   }
 
@@ -49,14 +50,16 @@ export class CompatibilityService {
     if (!component) throw new BadRequestException('Комплектующее не найдено');
 
     const components = [
-      ...build.components.filter((link) => link.componentId !== componentId).map((link) => ({ id: link.componentId, ...link.component })),
-      { id: component.id, ...component },
+      ...build.components
+        .filter((link) => link.componentId !== componentId)
+        .map((link) => link.component),
+      component,
     ];
     const issues = await this.checkComponents(components);
     if (issues.length) throw new BadRequestException(issues.map((issue) => issue.message));
   }
 
-  private async checkComponents(components: Array<ComponentForCompatibility & { id: string }>): Promise<CompatibilityIssue[]> {
+  private async checkComponents(components: ComponentForCompatibility[]): Promise<CompatibilityIssue[]> {
     const issues: CompatibilityIssue[] = [];
     const byCategory = (code: string) => components.filter((item) => item.category.code === code);
     const cpu = byCategory('CPU')[0];
@@ -92,7 +95,7 @@ export class CompatibilityService {
     return issues;
   }
 
-  private matchField(issues: CompatibilityIssue[], left: (ComponentForCompatibility & { id: string }) | undefined, right: (ComponentForCompatibility & { id: string }) | undefined, field: string, message: string) {
+  private matchField(issues: CompatibilityIssue[], left: ComponentForCompatibility | undefined, right: ComponentForCompatibility | undefined, field: string, message: string) {
     if (!left || !right) return;
     const leftValue = this.stringValue(left.compatibility, field);
     const rightValue = this.stringValue(right.compatibility, field);
@@ -101,7 +104,7 @@ export class CompatibilityService {
     }
   }
 
-  private evaluateRule(ruleValue: unknown, components: Array<ComponentForCompatibility & { id: string }>, description: string): CompatibilityIssue | null {
+  private evaluateRule(ruleValue: unknown, components: ComponentForCompatibility[], description: string): CompatibilityIssue | null {
     if (!this.isRecord(ruleValue)) return null;
     const condition = this.isRecord(ruleValue.if) ? ruleValue.if : null;
     const requires = this.isRecord(ruleValue.requires) ? ruleValue.requires : null;
