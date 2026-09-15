@@ -40,7 +40,7 @@ export class PcBuildsAdminService {
     if (dto.categoryId) await this.ensureCategory(dto.categoryId);
 
     return this.prisma.pCBuild.create({
-      data: this.toData(dto),
+      data: this.toCreateData(dto),
       include: buildInclude,
     });
   }
@@ -52,7 +52,7 @@ export class PcBuildsAdminService {
 
     return this.prisma.pCBuild.update({
       where: { id },
-      data: this.toData(dto),
+      data: this.toUpdateData(dto),
       include: buildInclude,
     });
   }
@@ -87,7 +87,23 @@ export class PcBuildsAdminService {
     return { ok: true };
   }
 
-  private toData(dto: CreatePcBuildDto | UpdatePcBuildDto): Prisma.PCBuildUncheckedCreateInput | Prisma.PCBuildUncheckedUpdateInput {
+  private toCreateData(dto: CreatePcBuildDto): Prisma.PCBuildUncheckedCreateInput {
+    return {
+      slug: dto.slug,
+      name: dto.name,
+      description: dto.description ?? null,
+      price: dto.price,
+      status: dto.status,
+      purpose: dto.purpose,
+      resolution: dto.resolution ?? null,
+      warrantyMonths: dto.warrantyMonths ?? null,
+      buildTimeDays: dto.buildTimeDays ?? null,
+      avitoUrl: dto.avitoUrl ?? null,
+      categoryId: dto.categoryId ?? null,
+    };
+  }
+
+  private toUpdateData(dto: UpdatePcBuildDto): Prisma.PCBuildUncheckedUpdateInput {
     return {
       ...(dto.slug !== undefined && { slug: dto.slug }),
       ...(dto.name !== undefined && { name: dto.name }),

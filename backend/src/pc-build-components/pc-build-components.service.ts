@@ -18,7 +18,7 @@ export class PcBuildComponentsService {
     return this.prisma.pCBuild.findMany({
       include: {
         category: true,
-        components: { include: compositionInclude.component, orderBy: { component: { category: { name: 'asc' } } } },
+        components: { include: compositionInclude, orderBy: { component: { category: { name: 'asc' } } } },
       },
       orderBy: [{ status: 'asc' }, { name: 'asc' }],
     });
@@ -30,7 +30,7 @@ export class PcBuildComponentsService {
       include: {
         category: true,
         components: {
-          include: compositionInclude.component,
+          include: compositionInclude,
           orderBy: { component: { category: { name: 'asc' } } },
         },
       },
