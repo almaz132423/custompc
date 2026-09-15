@@ -32,9 +32,7 @@ export class ConfiguratorService {
       throw new BadRequestException('Одно или несколько выбранных комплектующих недоступны');
     }
 
-    const issues = await this.compatibility.validateComponents(
-      components.map((component) => ({ id: component.id, ...component })),
-    );
+    const issues = await this.compatibility.validateComponents(components);
 
     return { compatible: issues.length === 0, componentIds: uniqueIds, issues };
   }
