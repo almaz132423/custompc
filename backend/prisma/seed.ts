@@ -138,6 +138,27 @@ async function main() {
     component('COOLING', 'DeepCool', 'AK620', 7500, { type: 'air' }, { socket: 'AM5' }),
   ]);
 
+  // Дополнительный набор для конфигуратора: несколько вариантов каждой категории,
+  // чтобы пользователь мог реально сравнивать комплектующие, а не видеть по одному варианту.
+  await Promise.all([
+    component('CPU', 'Intel', 'Core i5-14400F', 19000, { cores: 10, threads: 16 }, { socket: 'LGA1700' }),
+    component('CPU', 'AMD', 'Ryzen 7 7800X3D', 39000, { cores: 8, threads: 16 }, { socket: 'AM5' }),
+    component('GPU', 'NVIDIA', 'GeForce RTX 4060 Ti 8GB', 44000, { memoryGb: 8 }, { lengthMm: 250, requiredPowerW: 550 }),
+    component('GPU', 'AMD', 'Radeon RX 7800 XT', 62000, { memoryGb: 16 }, { lengthMm: 300, requiredPowerW: 700 }),
+    component('MOTHERBOARD', 'ASUS', 'TUF GAMING B760-PLUS WIFI', 20000, { memoryType: 'DDR5' }, { socket: 'LGA1700', ramType: 'DDR5', formFactor: 'ATX' }),
+    component('MOTHERBOARD', 'MSI', 'PRO B650-S WIFI', 17000, { memoryType: 'DDR5' }, { socket: 'AM5', ramType: 'DDR5', formFactor: 'ATX' }),
+    component('RAM', 'Corsair', 'Vengeance 32GB (2x16GB) DDR5', 9000, { capacityGb: 32, memoryType: 'DDR5' }, { ramType: 'DDR5', modules: 2 }),
+    component('RAM', 'Kingston', 'FURY Beast 16GB (2x8GB) DDR4', 4200, { capacityGb: 16, memoryType: 'DDR4' }, { ramType: 'DDR4', modules: 2 }),
+    component('SSD', 'Samsung', '990 EVO 1TB', 8000, { capacityGb: 1000, interface: 'NVMe' }, {}),
+    component('SSD', 'WD', 'Black SN850X 2TB', 18000, { capacityGb: 2000, interface: 'NVMe' }, {}),
+    component('PSU', 'Corsair', 'RM750e', 9500, { powerW: 750 }, { powerW: 750 }),
+    component('PSU', 'be quiet!', 'Pure Power 12 M 1000W', 15500, { powerW: 1000 }, { powerW: 1000 }),
+    component('CASE', 'NZXT', 'H5 Flow', 8500, { formFactor: 'ATX' }, { formFactor: 'ATX', maxGpuLengthMm: 365 }),
+    component('CASE', 'Montech', 'AIR 903 MAX', 8000, { formFactor: 'ATX' }, { formFactor: 'ATX', maxGpuLengthMm: 400 }),
+    component('COOLING', 'Thermalright', 'Peerless Assassin 120 SE', 4500, { type: 'air' }, { socket: 'AM5' }),
+    component('COOLING', 'DeepCool', 'LS520 SE', 6500, { type: 'liquid' }, { socket: 'LGA1700' }),
+  ]);
+
   const buildComponents = [
     [start, [startCpu, startGpu, startBoard, startRam, startSsd, startPsu, startCase, startCooling]],
     [gamingBuild, [gamingCpu, gamingGpu, gamingBoard, gamingRam, gamingSsd, gamingPsu, gamingCase, gamingCooling]],
