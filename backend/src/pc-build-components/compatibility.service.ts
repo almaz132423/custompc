@@ -9,6 +9,7 @@ type ComponentForCompatibility = {
   compatibility: unknown;
   category: { code: string; name: string };
 };
+type CompatibilityRuleRecord = { id: string; name: string; description: string | null; rule: unknown; isActive: boolean };
 
 export type CompatibilityIssue = {
   type: 'PAIR' | 'POWER' | 'RULE';
@@ -32,8 +33,13 @@ export class CompatibilityService {
     return { compatible: issues.length === 0, buildId, issues };
   }
 
-  async validateComponents(components: ComponentForCompatibility[]) {
-    return this.checkComponents(components);
+  async validateComponents(components: ComponentForCompatibility[], activeRules?: CompatibilityRuleRecord[]) {
+    const rules = activeRules ?? await this.getActiveRules();
+    return this.checkComponents(components, rules);
+  }
+
+  async getActiveRules(): Promise<CompatibilityRuleRecord[]> {
+    return this.prisma.compatibilityRule.findMany({ where: { isActive: true } });
   }
 
   async assertComponentCanBeAdded(buildId: string, componentId: string) {
@@ -55,11 +61,11 @@ export class CompatibilityService {
         .map((link) => link.component),
       component,
     ];
-    const issues = await this.checkComponents(components);
+    const issues = await this.validateComponents(components);
     if (issues.length) throw new BadRequestException(issues.map((issue) => issue.message));
   }
 
-  private async checkComponents(components: ComponentForCompatibility[]): Promise<CompatibilityIssue[]> {
+  private async checkComponents(components: ComponentForCompatibility[], activeRules: CompatibilityRuleRecord[]): Promise<CompatibilityIssue[]> {
     const issues: CompatibilityIssue[] = [];
     const byCategory = (code: string) => components.filter((item) => item.category.code === code);
     const cpu = byCategory('CPU')[0];
@@ -93,7 +99,6 @@ export class CompatibilityService {
       issues.push({ type: 'POWER', message: `Блок питания ${psu.manufacturer} ${psu.model} слабее рекомендуемой мощности для видеокарты`, componentIds: [gpu.id, psu.id] });
     }
 
-    const activeRules = await this.prisma.compatibilityRule.findMany({ where: { isActive: true } });
     for (const rule of activeRules) {
       const issue = this.evaluateRule(rule.rule, components, rule.description ?? rule.name);
       if (issue) issues.push(issue);
@@ -115,12 +120,23 @@ export class CompatibilityService {
     const condition = this.isRecord(ruleValue.if) ? ruleValue.if : null;
     const requires = this.isRecord(ruleValue.requires) ? ruleValue.requires : null;
     if (!condition || !requires) return null;
+
     const source = components.find((component) => this.matches(component, condition));
     if (!source) return null;
+
+    const requiredCategory = typeof requires.category === 'string' ? requires.category : undefined;
+    if (requiredCategory && !components.some((component) => component.category.code === requiredCategory)) {
+      return null;
+    }
+
     const target = components.find((component) => this.matches(component, requires));
     if (target) return null;
-    const requiredCategory = typeof requires.category === 'string' ? requires.category : 'требуемое комплектующее';
-    return { type: 'RULE', message: description || `Для ${source.manufacturer} ${source.model} требуется ${requiredCategory}`, componentIds: [source.id] };
+
+    return {
+      type: 'RULE',
+      message: description || `Для ${source.manufacturer} ${source.model} требуется ${requiredCategory ?? 'совместимое комплектующее'}`,
+      componentIds: [source.id],
+    };
   }
 
   private matches(component: ComponentForCompatibility, condition: JsonRecord) {
