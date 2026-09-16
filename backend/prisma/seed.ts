@@ -138,8 +138,6 @@ async function main() {
     component('COOLING', 'DeepCool', 'AK620', 7500, { type: 'air' }, { socket: 'AM5' }),
   ]);
 
-  // Дополнительный набор для конфигуратора: несколько вариантов каждой категории,
-  // чтобы пользователь мог реально сравнивать комплектующие, а не видеть по одному варианту.
   await Promise.all([
     component('CPU', 'Intel', 'Core i5-14400F', 19000, { cores: 10, threads: 16 }, { socket: 'LGA1700' }),
     component('CPU', 'AMD', 'Ryzen 7 7800X3D', 39000, { cores: 8, threads: 16 }, { socket: 'AM5' }),
@@ -173,6 +171,32 @@ async function main() {
         create: { pcBuildId: build.id, componentId: item.id, quantity: 1 },
       });
     }
+  }
+
+  const compatibilityRules = [
+    {
+      name: 'AM5 требует AM5-плату',
+      description: 'Для процессора AM5 нужна материнская плата с сокетом AM5.',
+      rule: { if: { category: 'CPU', socket: 'AM5' }, requires: { category: 'MOTHERBOARD', socket: 'AM5' } },
+    },
+    {
+      name: 'DDR5 требует DDR5-плату',
+      description: 'Для оперативной памяти DDR5 нужна материнская плата с поддержкой DDR5.',
+      rule: { if: { category: 'RAM', ramType: 'DDR5' }, requires: { category: 'MOTHERBOARD', ramType: 'DDR5' } },
+    },
+    {
+      name: 'AM5 требует совместимое охлаждение',
+      description: 'Для процессора AM5 нужно охлаждение с поддержкой AM5.',
+      rule: { if: { category: 'CPU', socket: 'AM5' }, requires: { category: 'COOLING', socket: 'AM5' } },
+    },
+  ];
+
+  for (const item of compatibilityRules) {
+    await prisma.compatibilityRule.upsert({
+      where: { id: `seed-${item.name}` },
+      update: { description: item.description, rule: item.rule, isActive: true },
+      create: { id: `seed-${item.name}`, name: item.name, description: item.description, rule: item.rule, isActive: true },
+    });
   }
 
   console.log('Тестовые данные и комплектующие добавлены');
