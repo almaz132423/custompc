@@ -32,13 +32,17 @@ export class ConfiguratorService {
           include: { category: true },
         })
       : [];
+    const activeRules = await this.compatibility.getActiveRules();
 
     const excluded: { id: string; manufacturer: string; model: string; reasons: string[] }[] = [];
     const compatible: typeof candidates = [];
 
     for (const candidate of candidates) {
       const selectedWithoutSameCategory = selected.filter((item) => item.categoryId !== candidate.categoryId);
-      const issues = await this.compatibility.validateComponents([...selectedWithoutSameCategory, candidate]);
+      const issues = await this.compatibility.validateComponents(
+        [...selectedWithoutSameCategory, candidate],
+        activeRules,
+      );
       if (issues.length === 0) {
         compatible.push(candidate);
       } else {
