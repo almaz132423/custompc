@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { ThemeSwitcher } from "./theme-switcher";
 
 const NAV_LINKS = [
   { href: "/pc", label: "Каталог ПК" },
@@ -12,8 +15,8 @@ const NAV_LINKS = [
 export function SiteHeader() {
   return (
     <header className="border-b border-border">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link href="/" className="font-display text-lg font-semibold">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
+        <Link href="/" className="shrink-0 font-display text-lg font-semibold">
           CustomPS
         </Link>
 
@@ -29,13 +32,16 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <Link
-          href="https://www.avito.ru"
-          target="_blank"
-          className="font-sans text-sm text-muted transition-colors hover:text-text"
-        >
-          Авито
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          <ThemeSwitcher />
+          <Link
+            href="https://www.avito.ru"
+            target="_blank"
+            className="hidden font-sans text-sm text-muted transition-colors hover:text-text sm:block"
+          >
+            Авито
+          </Link>
+        </div>
       </div>
     </header>
   );
