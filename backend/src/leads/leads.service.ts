@@ -28,7 +28,11 @@ export class LeadsService {
       pcBuildId = build.id;
     }
 
-    if (this.isCustomConfiguration(configuration)) {
+    if (configuration?.type === 'CUSTOM_CONFIG') {
+      if (!this.isCustomConfiguration(configuration)) {
+        throw new BadRequestException('Некорректная конфигурация конфигуратора');
+      }
+
       const validatedConfiguration = await this.compatibilityService.validateCustomConfiguration(configuration.componentIds);
       configuration = {
         ...configuration,
@@ -62,12 +66,7 @@ export class LeadsService {
     });
   }
 
-  private isCustomConfiguration(value: Record<string, unknown> | undefined): value is Record<string, unknown> & { type: 'CUSTOM_CONFIG'; componentIds: string[] } {
-    return Boolean(
-      value &&
-      value.type === 'CUSTOM_CONFIG' &&
-      Array.isArray(value.componentIds) &&
-      value.componentIds.every((id) => typeof id === 'string'),
-    );
+  private isCustomConfiguration(value: Record<string, unknown>): value is Record<string, unknown> & { type: 'CUSTOM_CONFIG'; componentIds: string[] } {
+    return Array.isArray(value.componentIds) && value.componentIds.length > 0 && value.componentIds.every((id) => typeof id === 'string');
   }
 }
