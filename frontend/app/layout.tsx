@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AccessibilityProvider } from "@/components/accessibility-provider";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",
@@ -37,7 +38,9 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${plexSans.variable} ${plexMono.variable} antialiased`}
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AccessibilityProvider>{children}</AccessibilityProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
