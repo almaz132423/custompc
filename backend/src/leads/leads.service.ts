@@ -1,14 +1,19 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { CompatibilityService } from '../pc-build-components/compatibility.service.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
 
 @Injectable()
 export class LeadsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private compatibilityService: CompatibilityService,
+  ) {}
 
   async create(dto: CreateLeadDto) {
     let pcBuildId: string | undefined;
+    let configuration = dto.configuration;
 
     if (dto.pcBuildId) {
       const build = await this.prisma.pCBuild.findUnique({
@@ -23,6 +28,14 @@ export class LeadsService {
       pcBuildId = build.id;
     }
 
+    if (this.isCustomConfiguration(configuration)) {
+      const validatedConfiguration = await this.compatibilityService.validateCustomConfiguration(configuration.componentIds);
+      configuration = {
+        ...configuration,
+        ...validatedConfiguration,
+      };
+    }
+
     return this.prisma.lead.create({
       data: {
         name: dto.name,
@@ -32,7 +45,7 @@ export class LeadsService {
         comment: dto.comment,
         category: dto.category,
         pcBuildId,
-        configuration: dto.configuration as Prisma.InputJsonValue | undefined,
+        configuration: configuration as Prisma.InputJsonValue | undefined,
       },
     });
   }
@@ -47,5 +60,14 @@ export class LeadsService {
         },
       },
     });
+  }
+
+  private isCustomConfiguration(value: Record<string, unknown> | undefined): value is Record<string, unknown> & { type: 'CUSTOM_CONFIG'; componentIds: string[] } {
+    return Boolean(
+      value &&
+      value.type === 'CUSTOM_CONFIG' &&
+      Array.isArray(value.componentIds) &&
+      value.componentIds.every((id) => typeof id === 'string'),
+    );
   }
 }
