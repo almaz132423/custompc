@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ThemeSwitcher } from "./theme-switcher";
+import { AccessibilityPanel } from "./accessibility-panel";
 
 const NAV_LINKS = [
   { href: "/pc", label: "Каталог ПК" },
@@ -20,24 +21,26 @@ export function SiteHeader() {
           CustomPS
         </Link>
 
-        <nav className="hidden items-center gap-6 font-sans text-sm text-muted md:flex">
+        <nav className="hidden items-center gap-6 font-sans text-sm text-muted md:flex" aria-label="Основная навигация">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="transition-colors hover:text-text"
+              className="transition-colors hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2">
+          <AccessibilityPanel />
           <ThemeSwitcher />
           <Link
             href="https://www.avito.ru"
             target="_blank"
-            className="hidden font-sans text-sm text-muted transition-colors hover:text-text sm:block"
+            rel="noreferrer"
+            className="hidden font-sans text-sm text-muted transition-colors hover:text-text sm:block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             Авито
           </Link>
