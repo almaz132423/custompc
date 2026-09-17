@@ -42,6 +42,49 @@ export class CompatibilityService {
     return this.prisma.compatibilityRule.findMany({ where: { isActive: true } });
   }
 
+  async validateCustomConfiguration(componentIds: string[]) {
+    const uniqueIds = [...new Set(componentIds)];
+    if (uniqueIds.length === 0) throw new BadRequestException('Конфигурация не содержит комплектующих');
+    if (uniqueIds.length > 8) throw new BadRequestException('В конфигурации слишком много комплектующих');
+
+    const components = await this.prisma.component.findMany({
+      where: { id: { in: uniqueIds }, inStock: true },
+      include: { category: true },
+    });
+
+    if (components.length !== uniqueIds.length) {
+      throw new BadRequestException('Одно или несколько выбранных комплектующих недоступны');
+    }
+
+    const categoryCodes = components.map((component) => component.category.code);
+    if (new Set(categoryCodes).size !== categoryCodes.length) {
+      throw new BadRequestException('В конфигурации нельзя выбрать два комплектующих одной категории');
+    }
+
+    const issues = await this.validateComponents(components);
+    if (issues.length) {
+      throw new BadRequestException(issues.map((issue) => issue.message));
+    }
+
+    const byCategory = new Map(components.map((component) => [component.category.code, component]));
+    const orderedComponents = [...byCategory.values()].sort((a, b) => categoryOrder(a.category.code) - categoryOrder(b.category.code));
+    const total = orderedComponents.reduce((sum, component) => sum + Number(component.price), 0);
+
+    return {
+      type: 'CUSTOM_CONFIG',
+      componentIds: orderedComponents.map((component) => component.id),
+      components: orderedComponents.map((component) => ({
+        id: component.id,
+        category: component.category.code,
+        categoryName: component.category.name,
+        manufacturer: component.manufacturer,
+        model: component.model,
+        price: component.price.toString(),
+      })),
+      total: String(total),
+    };
+  }
+
   async assertComponentCanBeAdded(buildId: string, componentId: string) {
     const build = await this.prisma.pCBuild.findUnique({
       where: { id: buildId },
@@ -158,4 +201,10 @@ export class CompatibilityService {
     return undefined;
   }
   private isRecord(value: unknown): value is JsonRecord { return typeof value === 'object' && value !== null && !Array.isArray(value); }
+}
+
+function categoryOrder(code: string) {
+  const order = ['CPU', 'MOTHERBOARD', 'RAM', 'GPU', 'SSD', 'PSU', 'CASE', 'COOLING'];
+  const index = order.indexOf(code);
+  return index === -1 ? order.length : index;
 }

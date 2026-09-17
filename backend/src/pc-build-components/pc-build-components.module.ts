@@ -10,5 +10,6 @@ import { ConfiguratorService } from './configurator.service.js';
   imports: [AuthModule],
   controllers: [PcBuildComponentsController, ConfiguratorController],
   providers: [PcBuildComponentsService, CompatibilityService, ConfiguratorService],
+  exports: [CompatibilityService],
 })
 export class PcBuildComponentsModule {}
