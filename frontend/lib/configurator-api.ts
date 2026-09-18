@@ -19,9 +19,9 @@ export async function getConfiguratorCategories(): Promise<ComponentCategory[]> 
   return res.json();
 }
 
-export async function getConfiguratorComponents(categoryId?: string): Promise<Component[]> {
-  const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
-  const res = await fetch(`${API_URL}/configurator/components${query}`, { cache: "no-store" });
+export async function getConfiguratorComponents(categoryId?: string, search?: string, offset = 0, limit = 40): Promise<{ components: Component[]; total: number; offset: number; limit: number; hasMore: boolean; nextOffset: number | null }> {
+  const query = new URLSearchParams();\n  if (categoryId) query.set("categoryId", categoryId);\n  if (search) query.set("search", search);\n  query.set("offset", String(offset));\n  query.set("limit", String(limit));
+  const res = await fetch(`${API_URL}/configurator/components?${query.toString()}`, { cache: "no-store" });
   if (!res.ok) throw new Error("Не удалось загрузить комплектующие");
   return res.json();
 }
