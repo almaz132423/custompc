@@ -66,11 +66,15 @@ export class CompatibilityService {
       throw new BadRequestException(issues.map((issue) => issue.message));
     }
 
-    if (components.some((component) => component.price === null)) {
+    const pricedComponents = components.filter(
+      (component): component is typeof component & { price: NonNullable<typeof component.price> } =>
+        component.price !== null,
+    );
+    if (pricedComponents.length !== components.length) {
       throw new BadRequestException('У одного или нескольких выбранных комплектующих не указана цена');
     }
 
-    const byCategory = new Map(components.map((component) => [component.category.code, component]));
+    const byCategory = new Map(pricedComponents.map((component) => [component.category.code, component]));
     const orderedComponents = [...byCategory.values()].sort((a, b) => categoryOrder(a.category.code) - categoryOrder(b.category.code));
     const total = orderedComponents.reduce((sum, component) => sum + Number(component.price), 0);
 
