@@ -269,7 +269,7 @@ export default function AdminComponentsPage() {
         </div>
       </section>
 
-      {loading ? <p className="mt-6 text-sm text-muted">Загрузка…</p> : filteredComponents.length === 0 ? <p className="mt-6 text-sm text-muted">По заданным фильтрам комплектующие не найдены.</p> : (
+      {loading ? <p className="mt-6 text-sm text-muted">Загрузка…</p> : components.length === 0 ? <p className="mt-6 text-sm text-muted">По заданным фильтрам комплектующие не найдены.</p> : (
         <VirtualizedComponentTable components={components} onEdit={startEdit} onDelete={handleDelete} onEndReached={loadMore} />
         {loadingMore && <p className="mt-3 text-center text-xs text-muted">Загружаем следующие комплектующие…</p>}
       )}
