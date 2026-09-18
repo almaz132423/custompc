@@ -52,7 +52,7 @@ export default function ConfiguratorPage() {
 
   const activeCategory = orderedCategories.find((category) => category.code === activeCode) ?? orderedCategories[0];
   const selectedComponents = orderedCategories.map((category) => selection[category.code]).filter(Boolean) as Component[];
-  const selectedIds = useMemo(() => selectedComponents.map((component) => component.id), [selectedComponents.map((component) => component.id).join(",")]);
+  const selectedIds = useMemo(() => orderedCategories.map((category) => selection[category.code]).filter(Boolean).map((component) => (component as Component).id), [orderedCategories, selection]);
   const total = selectedComponents.reduce((sum, component) => sum + Number(component.price), 0);
   const completed = selectedComponents.length;
   const requestConfig = encodeURIComponent(JSON.stringify({
