@@ -18,6 +18,9 @@ export default function AdminBuildsPage() {
   const [components, setComponents] = useState<Component[]>([]);
   const [selectedBuildId, setSelectedBuildId] = useState("");
   const [selectedComponentId, setSelectedComponentId] = useState("");
+  const [componentSearch, setComponentSearch] = useState("");
+  const [componentsLoading, setComponentsLoading] = useState(false);
+  const [componentsTotal, setComponentsTotal] = useState(0);
   const [quantity, setQuantity] = useState("1");
   const [compatibility, setCompatibility] = useState<CompatibilityResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,12 +37,8 @@ export default function AdminBuildsPage() {
     setLoading(true);
     setError("");
     try {
-      const [loadedBuilds, loadedComponents] = await Promise.all([
-        getAdminBuilds(),
-        getComponents(),
-      ]);
+      const loadedBuilds = await getAdminBuilds();
       setBuilds(loadedBuilds);
-      setComponents(loadedComponents);
       setSelectedBuildId((current) => current || loadedBuilds[0]?.id || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка загрузки");
@@ -191,18 +190,20 @@ export default function AdminBuildsPage() {
               <div className="mt-6 grid gap-4 md:grid-cols-[1fr_120px_auto]">
                 <label>
                   <span className="text-sm font-medium">Комплектующее</span>
+                  <input value={componentSearch} onChange={(e) => setComponentSearch(e.target.value)} placeholder="Поиск по производителю или модели…" className="admin-input mt-2" />
                   <select
                     value={selectedComponentId}
                     onChange={(e) => setSelectedComponentId(e.target.value)}
                     className="admin-input mt-2"
                   >
-                    <option value="">Выберите компонент</option>
+                    <option value="">{componentsLoading ? "Загрузка…" : `Выберите компонент · показано ${components.length} из ${componentsTotal}`}</option>
                     {components.map((component) => (
                       <option key={component.id} value={component.id}>
                         {component.category.name} · {component.manufacturer} {component.model}
                       </option>
                     ))}
                   </select>
+                  <span className="mt-1 block text-xs text-muted">Каталог загружается страницами по 50, а не целиком.</span>
                 </label>
                 <label>
                   <span className="text-sm font-medium">Количество</span>
@@ -271,3 +272,19 @@ export default function AdminBuildsPage() {
     </div>
   );
 }
+  useEffect(() => {
+    const timer = window.setTimeout(async () => {
+      setComponentsLoading(true);
+      try {
+        const result = await getComponents({ search: componentSearch.trim() || undefined, stock: "in", sort: "name-asc", offset: 0, limit: 50 });
+        setComponents(result.items);
+        setComponentsTotal(result.total);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Не удалось загрузить комплектующие");
+      } finally {
+        setComponentsLoading(false);
+      }
+    }, componentSearch.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [componentSearch]);
+
