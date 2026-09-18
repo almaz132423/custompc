@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CompatibilityService } from '../pc-build-components/compatibility.service.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
+import { UpdateLeadStatusDto } from './dto/update-lead-status.dto.js';
 
 @Injectable()
 export class LeadsService {
@@ -55,6 +56,29 @@ export class LeadsService {
   }
 
   // Пригодится для раздела 37 ТЗ (управление заявками в админке)
+  async updateStatus(id: string, dto: UpdateLeadStatusDto) {
+    const lead = await this.prisma.lead.findUnique({ where: { id }, select: { id: true, status: true } });
+    if (!lead) throw new NotFoundException('Заявка не найдена');
+    if (lead.status === dto.status && !dto.comment?.trim()) return this.findOne(id);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (lead.status !== dto.status) {
+        await tx.lead.update({ where: { id }, data: { status: dto.status } });
+        await tx.leadStatusHistory.create({ data: { leadId: id, fromStatus: lead.status, toStatus: dto.status, comment: dto.comment?.trim() || undefined } });
+      } else if (dto.comment?.trim()) {
+        await tx.leadStatusHistory.create({ data: { leadId: id, fromStatus: lead.status, toStatus: lead.status, comment: dto.comment.trim() } });
+      }
+    });
+    return this.findOne(id);
+  }
+
+  findOne(id: string) {
+    return this.prisma.lead.findUnique({
+      where: { id },
+      include: { pcBuild: { select: { id: true, name: true, slug: true, price: true } }, statusHistory: { orderBy: { createdAt: 'desc' } } },
+    });
+  }
+
   findAll() {
     return this.prisma.lead.findMany({
       orderBy: { createdAt: 'desc' },
