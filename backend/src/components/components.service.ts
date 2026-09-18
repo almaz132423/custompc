@@ -111,7 +111,7 @@ export class ComponentsService {
 
   private toCreateData(dto: CreateComponentDto): Prisma.ComponentUncheckedCreateInput {
     return {
-      categoryId: dto.categoryId, manufacturer: dto.manufacturer, model: dto.model, price: dto.price,
+      categoryId: dto.categoryId, manufacturer: dto.manufacturer, model: dto.model, price: dto.price, costPrice: dto.costPrice ?? null,
       ...(dto.specs !== undefined && { specs: dto.specs as Prisma.InputJsonValue }),
       ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       ...(dto.inStock !== undefined && { inStock: dto.inStock }),
@@ -125,6 +125,7 @@ export class ComponentsService {
       ...(dto.manufacturer !== undefined && { manufacturer: dto.manufacturer }),
       ...(dto.model !== undefined && { model: dto.model }),
       ...(dto.price !== undefined && { price: dto.price }),
+      ...(dto.costPrice !== undefined && { costPrice: dto.costPrice }),
       ...(dto.specs !== undefined && { specs: dto.specs as Prisma.InputJsonValue }),
       ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       ...(dto.inStock !== undefined && { inStock: dto.inStock }),
