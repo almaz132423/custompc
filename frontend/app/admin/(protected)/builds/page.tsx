@@ -51,6 +51,24 @@ export default function AdminBuildsPage() {
     load();
   }, []);
 
+useEffect(() => {
+    const timer = window.setTimeout(async () => {
+      setComponentsLoading(true);
+      try {
+        const result = await getComponents({ search: componentSearch.trim() || undefined, stock: "in", sort: "name-asc", offset: 0, limit: 50 });
+        setComponents(result.items);
+        setComponentsTotal(result.total);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Не удалось загрузить комплектующие");
+      } finally {
+        setComponentsLoading(false);
+      }
+    }, componentSearch.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [componentSearch]);
+
+
+
   async function checkCompatibility() {
     if (!selectedBuildId) return;
     setChecking(true);
@@ -272,19 +290,3 @@ export default function AdminBuildsPage() {
     </div>
   );
 }
-  useEffect(() => {
-    const timer = window.setTimeout(async () => {
-      setComponentsLoading(true);
-      try {
-        const result = await getComponents({ search: componentSearch.trim() || undefined, stock: "in", sort: "name-asc", offset: 0, limit: 50 });
-        setComponents(result.items);
-        setComponentsTotal(result.total);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Не удалось загрузить комплектующие");
-      } finally {
-        setComponentsLoading(false);
-      }
-    }, componentSearch.trim() ? 250 : 0);
-    return () => window.clearTimeout(timer);
-  }, [componentSearch]);
-
