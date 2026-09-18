@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { OrderStatusStage, PaymentStatus, Prisma } from '@prisma/client';
+import { UpdateOrderDto } from './dto/update-order.dto.js';
+import { AddPaymentDto } from './dto/add-payment.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
@@ -55,10 +57,42 @@ export class OrdersService {
     });
   }
 
+  async update(id: string, dto: UpdateOrderDto) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException('Заказ не найден');
+    if (!dto.status && !dto.paymentStatus && !dto.comment?.trim()) throw new BadRequestException('Нет изменений для сохранения');
+
+    return this.prisma.$transaction(async (tx) => {
+      const data: Prisma.OrderUpdateInput = {};
+      if (dto.status) data.status = dto.status;
+      if (dto.paymentStatus) data.paymentStatus = dto.paymentStatus;
+      if (dto.comment?.trim()) data.comment = dto.comment.trim();
+      const updated = await tx.order.update({ where: { id }, data, include: { customer: true, lead: true, items: true, statusHistory: { orderBy: { createdAt: 'desc' } }, payments: { orderBy: { paidAt: 'desc' } }, statusHistory: { orderBy: { createdAt: 'desc' } } } });
+      if (dto.status && dto.status !== order.status) await tx.orderStatusHistory.create({ data: { orderId: id, fromStatus: order.status, toStatus: dto.status, comment: dto.comment?.trim() || undefined } });
+      return updated;
+    });
+  }
+
+  async addPayment(id: string, dto: AddPaymentDto) {
+    const order = await this.prisma.order.findUnique({ where: { id }, include: { payments: true } });
+    if (!order) throw new NotFoundException('Заказ не найден');
+    const paidBefore = order.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    const remaining = Number(order.totalPrice) - paidBefore;
+    if (dto.amount > remaining + 0.005) throw new BadRequestException('Сумма платежа превышает остаток по заказу');
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.payment.create({ data: { orderId: id, amount: new Prisma.Decimal(dto.amount), method: dto.method?.trim() || undefined } });
+      const paid = paidBefore + dto.amount;
+      const paymentStatus: PaymentStatus = paid >= Number(order.totalPrice) - 0.005 ? 'PAID' : 'PARTIALLY_PAID';
+      const status = order.status === 'NEW' && paymentStatus === 'PAID' ? 'PAID' : order.status;
+      return tx.order.update({ where: { id }, data: { paymentStatus, status }, include: { customer: true, lead: true, items: true, payments: { orderBy: { paidAt: 'desc' } }, statusHistory: { orderBy: { createdAt: 'desc' } } } });
+    });
+    return result;
+  }
+
   findAll() {
     return this.prisma.order.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { customer: true, lead: { select: { id: true, name: true, contact: true, status: true } }, items: true },
+      include: { customer: true, lead: { select: { id: true, name: true, contact: true, status: true } }, items: true, statusHistory: { orderBy: { createdAt: 'desc' } } },
     });
   }
 
