@@ -181,7 +181,7 @@ async function loadDataset(file: string): Promise<DatasetPart[]> {
 
 async function main() {
   console.log(`Импорт ${DATASET_SOURCE} из ${DATASET_BASE}`);
-  console.log('Цены сохраняются как исходный snapshot в USD; это не актуальные цены магазина.\n');
+  console.log('Цена из dataset не переносится в Component.price: исходная цена сохраняется внутри specs как snapshot в USD.\n');
 
   let totalCreated = 0;
   let totalUpdated = 0;
@@ -214,7 +214,7 @@ async function main() {
         categoryId: category.id,
         manufacturer,
         model,
-        price: source.price,
+        // Dataset contains a USD price snapshot, while Component.price is the\n        // application price. Do not import USD into the application's price field.\n        price: null,
         specs: toSpecs(source, item.category, `${DATASET_BASE}/${item.file}`),
         compatibility,
         inStock: true,
