@@ -203,7 +203,7 @@ async function main() {
       const source = rows[index];
       const name = typeof source.name === 'string' ? source.name.trim() : '';
 
-      if (!name || typeof source.price !== 'number' || !Number.isFinite(source.price) || source.price < 0) {
+      if (!name) {
         skipped += 1;
         continue;
       }
