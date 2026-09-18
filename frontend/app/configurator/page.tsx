@@ -89,4 +89,33 @@ export default function ConfiguratorPage() {
     return () => { cancelled = true; };
   }, [activeCategory?.id, selection]);
 
+  const loadComponents = useCallback(async (offset = 0, append = false) => {
+    if (!activeCategory) return;
+    if (append) setLoadingMore(true); else setFiltering(true);
+    try {
+      const result = await getCompatibleConfiguratorComponents(activeCategory.id, selectedComponents.map((component) => component.id), { search, offset, limit: 40 });
+      setAvailableComponents((current) => append ? [...current, ...result.components] : result.components);
+      setExcludedComponents((current) => append ? [...current, ...result.excluded] : result.excluded);
+      setHasMore(result.hasMore);
+      setNextOffset(result.nextOffset);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось подобрать совместимые комплектующие");
+    } finally {
+      setFiltering(false);
+      setLoadingMore(false);
+    }
+  }, [activeCategory?.id, selectedComponents, search]);
+
+  useEffect(() => {
+    if (!activeCategory) return;
+    setAvailableComponents([]);
+    setExcludedComponents([]);
+    setNextOffset(0);
+    const timer = window.setTimeout(() => loadComponents(0, false), search.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [activeCategory?.id, selection, search, loadComponents]);
+
+  const loadMore = useCallback(() => {
+    if (!loadingMore && !filtering && hasMore && nextOffset !== null) loadComponents(nextOffset, true);
+  }, [filtering, hasMore, loadComponents, loadingMore, nextOffset]);
 
