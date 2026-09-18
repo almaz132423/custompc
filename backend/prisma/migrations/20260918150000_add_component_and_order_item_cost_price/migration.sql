@@ -1,0 +1,2 @@
+ALTER TABLE "Component" ADD COLUMN "costPrice" DECIMAL;
+ALTER TABLE "OrderItem" ADD COLUMN "costPrice" DECIMAL;
