@@ -88,50 +88,10 @@ export default function AdminComponentsPage() {
   const [error, setError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [nextOffset, setNextOffset] = useState<number | null>(null);\n  const [totalCount, setTotalCount] = useState(0);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
   const selectedCategory = useMemo(() => categories.find((category) => category.id === form.categoryId), [categories, form.categoryId]);
   const fields = compatibilityFields[selectedCategory?.code ?? ""] ?? [];
 
-  async function loadComponents(offset = 0, append = false) {
-    if (append) setLoadingMore(true); else setLoading(true);
-    setError("");
-    try {
-      const result = await getComponents({
-        categoryId: categoryFilter || undefined,
-        search: search.trim() || undefined,
-        stock: stockFilter,
-        minPrice: minPrice || undefined,
-        maxPrice: maxPrice || undefined,
-        sort,
-        offset,
-        limit: 50,
-      });
-      setComponents((current) => append ? [...current, ...result.items] : result.items);
-      setHasMore(result.hasMore);\n      setTotalCount(result.total);
-      setNextOffset(result.nextOffset);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка загрузки");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }
 
-  async function loadMore() {
-    if (!loadingMore && !loading && hasMore && nextOffset !== null) {
-      await loadComponents(nextOffset, true);
-    }
-  }  useEffect(() => {
-    Promise.all([getComponentCategories()])
-      .then(([loadedCategories]) => {
-        setCategories(loadedCategories);
-        if (loadedCategories[0]) setForm((current) => ({ ...current, categoryId: current.categoryId || loadedCategories[0].id }));
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Ошибка загрузки"));
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => loadComponents(0, false), search.trim() ? 250 : 0);
-    return () => window.clearTimeout(timer);
-  }, [categoryFilter, search, stockFilter, minPrice, maxPrice, sort]);
