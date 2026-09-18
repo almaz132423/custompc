@@ -155,7 +155,7 @@ model Component {
   category      ComponentCategory @relation(fields: [categoryId], references: [id])
   manufacturer  String
   model         String
-  price         Decimal
+  price         Decimal?
   specs         Json?    // произвольные характеристики (частота, объём и т.д.)
   imageUrl      String?
   inStock       Boolean  @default(true)
