@@ -7,9 +7,10 @@ type Props = {
   components: Component[];
   onEdit: (component: Component) => void;
   onDelete: (component: Component) => void;
+  onEndReached?: () => void;
 };
 
-export function VirtualizedComponentTable({ components, onEdit, onDelete }: Props) {
+export function VirtualizedComponentTable({ components, onEdit, onDelete, onEndReached }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(0);
   const height = 620;
@@ -17,6 +18,10 @@ export function VirtualizedComponentTable({ components, onEdit, onDelete }: Prop
   const overscan = 4;
   const first = Math.max(0, Math.floor(top / rowHeight) - overscan);
   const last = Math.min(components.length, Math.ceil((top + height) / rowHeight) + overscan);
+
+  useEffect(() => {
+    if (onEndReached && last >= components.length - 6 && components.length > 0) onEndReached();
+  }, [last, components.length, onEndReached]);
 
   useEffect(() => {
     const el = viewportRef.current;
