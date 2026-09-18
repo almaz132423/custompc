@@ -52,6 +52,7 @@ export default function ConfiguratorPage() {
 
   const activeCategory = orderedCategories.find((category) => category.code === activeCode) ?? orderedCategories[0];
   const selectedComponents = orderedCategories.map((category) => selection[category.code]).filter(Boolean) as Component[];
+  const selectedIds = useMemo(() => selectedComponents.map((component) => component.id), [selectedComponents.map((component) => component.id).join(",")]);
   const total = selectedComponents.reduce((sum, component) => sum + Number(component.price), 0);
   const completed = selectedComponents.length;
   const requestConfig = encodeURIComponent(JSON.stringify({
@@ -93,7 +94,7 @@ export default function ConfiguratorPage() {
     if (!activeCategory) return;
     if (append) setLoadingMore(true); else setFiltering(true);
     try {
-      const result = await getCompatibleConfiguratorComponents(activeCategory.id, selectedComponents.map((component) => component.id), { search, offset, limit: 40 });
+      const result = await getCompatibleConfiguratorComponents(activeCategory.id, selectedIds, { search, offset, limit: 40 });
       setAvailableComponents((current) => append ? [...current, ...result.components] : result.components);
       setExcludedComponents((current) => append ? [...current, ...result.excluded] : result.excluded);
       setHasMore(result.hasMore);
@@ -104,7 +105,7 @@ export default function ConfiguratorPage() {
       setFiltering(false);
       setLoadingMore(false);
     }
-  }, [activeCategory?.id, selectedComponents, search]);
+  }, [activeCategory?.id, selectedIds, search]);
 
   useEffect(() => {
     if (!activeCategory) return;
