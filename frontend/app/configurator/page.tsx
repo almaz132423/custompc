@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { formatPrice, type Component, type ComponentCategory, type CompatibilityIssue } from "@/lib/api";
 import { getCompatibleConfiguratorComponents, getConfiguratorCategories, validateConfigurator, type CompatibleComponentsResponse } from "@/lib/configurator-api";
+import { VirtualizedComponentGrid } from "@/components/virtualized-component-grid";
 
 const CATEGORY_ORDER = ["CPU", "MOTHERBOARD", "RAM", "GPU", "SSD", "PSU", "CASE", "COOLING"];
 const CATEGORY_LABELS: Record<string, string> = {
@@ -32,6 +33,9 @@ export default function ConfiguratorPage() {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [filtering, setFiltering] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -85,167 +89,4 @@ export default function ConfiguratorPage() {
     return () => { cancelled = true; };
   }, [activeCategory?.id, selection]);
 
-  const filteredComponents = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return availableComponents;
-    return availableComponents.filter((component) => `${component.manufacturer} ${component.model}`.toLowerCase().includes(query));
-  }, [availableComponents, search]);
 
-  async function selectComponent(component: Component) {
-    const nextSelection = { ...selection, [component.category.code]: component };
-    setSelection(nextSelection);
-    setIssues([]);
-    const ids = Object.values(nextSelection).filter(Boolean).map((item) => (item as Component).id);
-    setChecking(true);
-    try {
-      const result = await validateConfigurator(ids);
-      setIssues(result.issues);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось проверить совместимость");
-    } finally {
-      setChecking(false);
-    }
-  }
-
-  function clearSelection(code: string) {
-    const next = { ...selection };
-    delete next[code];
-    setSelection(next);
-    setIssues([]);
-  }
-
-  function nextCategory() {
-    const index = orderedCategories.findIndex((category) => category.code === activeCategory?.code);
-    if (index >= 0 && index < orderedCategories.length - 1) setActiveCode(orderedCategories[index + 1].code);
-  }
-
-  if (loading) {
-    return <div className="min-h-screen bg-ink"><SiteHeader /><main className="mx-auto max-w-6xl px-6 py-20 text-muted">Загрузка конфигуратора…</main><SiteFooter /></div>;
-  }
-
-  return (
-    <div className="min-h-screen bg-ink">
-      <SiteHeader />
-      <main className="mx-auto max-w-6xl px-6 py-12 lg:py-16">
-        <div className="max-w-3xl">
-          <p className="font-mono text-xs text-accent">CUSTOM PC</p>
-          <h1 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">Соберите ПК под себя</h1>
-          <p className="mt-4 text-muted">Выбирайте комплектующие по очереди. После каждого выбора конфигуратор оставляет только совместимые варианты.</p>
-        </div>
-
-        {error && <div className="mt-6 rounded-md border border-red-500/40 bg-red-500/5 p-4 text-sm text-red-300">{error}</div>}
-
-        <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_360px]">
-          <section>
-            <div className="flex flex-wrap gap-2">
-              {orderedCategories.map((category, index) => {
-                const selected = selection[category.code];
-                return (
-                  <button key={category.id} onClick={() => setActiveCode(category.code)} className={`rounded-md border px-3 py-2 text-left font-mono text-xs transition-colors ${activeCategory?.code === category.code ? "border-accent bg-accent-soft text-accent" : "border-border hover:border-accent"}`}>
-                    <span>{index + 1}. {CATEGORY_LABELS[category.code] ?? category.name}</span>
-                    <span className="ml-2 text-muted">{selected ? "✓" : "—"}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {activeCategory && (
-              <div className="mt-8">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="font-mono text-xs text-muted">ШАГ {orderedCategories.findIndex((category) => category.code === activeCategory.code) + 1} ИЗ {orderedCategories.length}</p>
-                    <h2 className="mt-1 font-display text-2xl font-semibold">{CATEGORY_LABELS[activeCategory.code] ?? activeCategory.name}</h2>
-                  </div>
-                  {selection[activeCategory.code] && <button onClick={() => clearSelection(activeCategory.code)} className="text-xs text-muted hover:text-text">Сбросить</button>}
-                </div>
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по производителю или модели" className="min-w-0 flex-1 rounded-md border border-border bg-surface px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-accent" />
-                  <div className="rounded-md border border-border px-4 py-3 text-xs text-muted sm:min-w-44">
-                    {filtering ? "Подбираем…" : `${filteredComponents.length} доступно`}
-                  </div>
-                </div>
-
-                {excludedComponents.length > 0 && (
-                  <details className="mt-4 rounded-md border border-border bg-surface p-4">
-                    <summary className="cursor-pointer text-sm">Почему часть вариантов скрыта? <span className="font-mono text-xs text-muted">{excludedComponents.length}</span></summary>
-                    <div className="mt-4 space-y-3">
-                      {excludedComponents.map((component) => (
-                        <div key={component.id} className="border-t border-border pt-3 first:border-0 first:pt-0">
-                          <p className="text-sm">{component.manufacturer} {component.model}</p>
-                          <ul className="mt-1 space-y-1 text-xs text-red-200">{component.reasons.map((reason) => <li key={reason}>• {reason}</li>)}</ul>
-                        </div>
-                      ))}
-                    </div>
-                  </details>
-                )}
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {filteredComponents.map((component) => {
-                    const selected = selection[component.category.code]?.id === component.id;
-                    return (
-                      <button key={component.id} onClick={() => selectComponent(component)} className={`rounded-md border p-4 text-left transition-colors ${selected ? "border-accent bg-accent-soft" : "border-border hover:border-accent"}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-mono text-xs text-muted">{component.manufacturer}</p>
-                            <p className="mt-1 font-medium">{component.model}</p>
-                          </div>
-                          {selected && <span className="font-mono text-xs text-accent">✓</span>}
-                        </div>
-                        <div className="mt-4 flex items-center justify-between font-mono text-sm">
-                          <span className="text-accent">{formatPrice(component.price)}</span>
-                          <span className="text-xs text-muted">В наличии</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {!filtering && filteredComponents.length === 0 && <div className="mt-5 rounded-md border border-border p-6 text-sm text-muted">Совместимых вариантов по этому запросу нет. Попробуйте изменить выбор или поиск.</div>}
-
-                <div className="mt-6 flex gap-3">
-                  {orderedCategories.findIndex((category) => category.code === activeCategory.code) > 0 && (
-                    <button onClick={() => setActiveCode(orderedCategories[orderedCategories.findIndex((category) => category.code === activeCategory.code) - 1].code)} className="rounded-md border border-border px-5 py-3 text-sm hover:border-accent">Назад</button>
-                  )}
-                  {orderedCategories.findIndex((category) => category.code === activeCategory.code) < orderedCategories.length - 1 && (
-                    <button onClick={nextCategory} className="rounded-md bg-accent px-5 py-3 text-sm font-medium text-ink hover:bg-accent-hover">Далее</button>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-
-          <aside className="h-fit rounded-md border border-border bg-surface p-5 lg:sticky lg:top-24">
-            <div className="flex items-center justify-between">
-              <p className="font-mono text-xs text-muted">ВАША КОНФИГУРАЦИЯ</p>
-              <span className="font-mono text-xs text-muted">{completed}/{orderedCategories.length}</span>
-            </div>
-            <p className="mt-3 font-mono text-2xl text-accent">{formatPrice(String(total))}</p>
-
-            <div className="mt-5 space-y-3">
-              {orderedCategories.map((category) => {
-                const component = selection[category.code];
-                return <div key={category.id} className="border-b border-border pb-3 last:border-0"><p className="font-mono text-[11px] text-muted">{CATEGORY_LABELS[category.code] ?? category.name}</p><p className="mt-1 text-sm">{component ? `${component.manufacturer} ${component.model}` : "Не выбрано"}</p></div>;
-              })}
-            </div>
-
-            {checking && <p className="mt-5 text-xs text-muted">Проверяем совместимость…</p>}
-            {!checking && issues.length > 0 && (
-              <div className="mt-5 rounded-md border border-red-500/40 bg-red-500/5 p-4">
-                <p className="font-mono text-xs text-red-300">НЕСОВМЕСТИМО</p>
-                <ul className="mt-2 space-y-2 text-xs text-red-200">{issues.map((issue, index) => <li key={`${issue.message}-${index}`}>• {issue.message}</li>)}</ul>
-              </div>
-            )}
-            {!checking && issues.length === 0 && completed > 0 && <p className="mt-5 text-xs text-accent">✓ Выбранные компоненты совместимы</p>}
-
-            <Link href={completed > 0 && issues.length === 0 ? requestHref : "#"} onClick={(event) => { if (completed === 0 || issues.length > 0) event.preventDefault(); }} className={`mt-6 block rounded-md px-5 py-3 text-center text-sm font-medium ${completed > 0 && issues.length === 0 ? "bg-accent text-ink hover:bg-accent-hover" : "cursor-not-allowed bg-border text-muted"}`}>
-              Отправить конфигурацию
-            </Link>
-            <p className="mt-3 text-center text-xs text-muted">Можно оставить незаполненные позиции — менеджер поможет подобрать их.</p>
-          </aside>
-        </div>
-      </main>
-      <SiteFooter />
-    </div>
-  );
-}
