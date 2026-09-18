@@ -287,8 +287,21 @@ model Lead {
   updatedAt     DateTime   @updatedAt
 
   order Order?
+  statusHistory LeadStatusHistory[]
 }
 
+
+model LeadStatusHistory {
+  id         String     @id @default(cuid())
+  leadId     String
+  lead       Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  fromStatus LeadStatus?
+  toStatus   LeadStatus
+  comment    String?
+  createdAt  DateTime   @default(now())
+
+  @@index([leadId, createdAt])
+}
 
 // Заказ создаётся из согласованной заявки (раздел 24-25 ТЗ)
 model Order {
