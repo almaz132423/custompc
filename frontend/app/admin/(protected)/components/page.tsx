@@ -94,4 +94,204 @@ export default function AdminComponentsPage() {
   const selectedCategory = useMemo(() => categories.find((category) => category.id === form.categoryId), [categories, form.categoryId]);
   const fields = compatibilityFields[selectedCategory?.code ?? ""] ?? [];
 
+  async function loadComponents(offset = 0, append = false) {
+    if (append) setLoadingMore(true); else setLoading(true);
+    setError("");
+    try {
+      const result = await getComponents({
+        categoryId: categoryFilter || undefined,
+        search: search.trim() || undefined,
+        stock: stockFilter,
+        minPrice: minPrice || undefined,
+        maxPrice: maxPrice || undefined,
+        sort,
+        offset,
+        limit: 50,
+      });
+      setComponents((current) => append ? [...current, ...result.items] : result.items);
+      setHasMore(result.hasMore);
+      setNextOffset(result.nextOffset);
+      setTotalCount(result.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка загрузки");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }
 
+  async function loadMore() {
+    if (!loadingMore && !loading && hasMore && nextOffset !== null) await loadComponents(nextOffset, true);
+  }
+
+  useEffect(() => {
+    getComponentCategories()
+      .then((loadedCategories) => {
+        setCategories(loadedCategories);
+        if (loadedCategories[0]) setForm((current) => ({ ...current, categoryId: current.categoryId || loadedCategories[0].id }));
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Ошибка загрузки"));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadComponents(0, false), search.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [categoryFilter, search, stockFilter, minPrice, maxPrice, sort]);
+
+  function startEdit(component: Component) {
+    setEditingId(component.id);
+    setForm({ categoryId: component.categoryId, manufacturer: component.manufacturer, model: component.model, price: component.price, imageUrl: component.imageUrl ?? "", specs: toJsonText(component.specs), compatibility: toJsonText(component.compatibility), inStock: component.inStock });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function resetForm() {
+    setEditingId(null);
+    setForm({ ...emptyForm, categoryId: categories[0]?.id ?? "" });
+  }
+
+  function resetFilters() {
+    setSearch("");
+    setCategoryFilter("");
+    setStockFilter("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setSort("name-asc");
+  }
+
+  function updateCompatibilityField(key: string, value: string) {
+    let current: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(form.compatibility || "{}");
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) current = parsed;
+    } catch {}
+    if (!value.trim()) delete current[key];
+    else current[key] = /^\d+(\.\d+)?$/.test(value.trim()) ? Number(value) : value.trim();
+    setForm({ ...form, compatibility: JSON.stringify(current, null, 2) });
+  }
+
+  function getCompatibilityValue(key: string): string {
+    try {
+      const parsed = JSON.parse(form.compatibility || "{}");
+      const value = parsed?.[key];
+      return value == null ? "" : String(value);
+    } catch {
+      return "";
+    }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const input = {
+        categoryId: form.categoryId,
+        manufacturer: form.manufacturer.trim(),
+        model: form.model.trim(),
+        price: form.price.trim(),
+        imageUrl: form.imageUrl.trim() || null,
+        specs: parseJson(form.specs, "Характеристики"),
+        compatibility: parseJson(form.compatibility, "Совместимость"),
+        inStock: form.inStock,
+      };
+      if (!input.categoryId || !input.manufacturer || !input.model || !input.price) throw new Error("Заполните категорию, производителя, модель и цену");
+      if (editingId) await updateComponent(editingId, input);
+      else await createComponent(input);
+      resetForm();
+      await loadComponents();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось сохранить комплектующее");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(component: Component) {
+    if (!window.confirm(`Удалить ${component.manufacturer} ${component.model}?`)) return;
+    setError("");
+    try {
+      await deleteComponent(component.id);
+      if (editingId === component.id) resetForm();
+      await loadComponents();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось удалить комплектующее");
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-semibold">Комплектующие</h1>
+          <p className="mt-2 text-sm text-muted">База компонентов для готовых сборок и конфигуратора.</p>
+        </div>
+        <span className="font-mono text-xs text-muted">Загружено {components.length} из {totalCount}</span>
+      </div>
+
+      {error && <div className="mt-6 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">{error}</div>}
+
+      <form onSubmit={handleSubmit} className="mt-8 rounded-md border border-border p-5">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="font-display text-lg font-semibold">{editingId ? "Редактирование" : "Новое комплектующее"}</h2>
+          {editingId && <button type="button" onClick={resetForm} className="text-sm text-muted hover:text-text">Отмена</button>}
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <Field label="Категория"><select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })} className="admin-input"><option value="">Выберите категорию</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
+          <Field label="Производитель"><input value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className="admin-input" /></Field>
+          <Field label="Модель"><input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} className="admin-input" /></Field>
+          <Field label="Цена, ₽"><input type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="admin-input" /></Field>
+          <Field label="Изображение URL"><input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} className="admin-input" /></Field>
+          <label className="flex items-center gap-3 pt-7 text-sm"><input type="checkbox" checked={form.inStock} onChange={(e) => setForm({ ...form, inStock: e.target.checked })} />В наличии</label>
+          <Field label="Характеристики JSON" hint='Для обычных характеристик: например {"cores":6,"frequencyGHz":4.2}'><textarea value={form.specs} onChange={(e) => setForm({ ...form, specs: e.target.value })} rows={5} className="admin-input font-mono text-xs" /></Field>
+
+          <div className="rounded-md border border-border p-4">
+            <div><h3 className="text-sm font-medium">Совместимость</h3><p className="mt-1 text-xs text-muted">Основные параметры заполняются обычными полями. JSON формируется автоматически.</p></div>
+            {selectedCategory?.code && categoryExplanations[selectedCategory.code] && <div className="mt-3 rounded-md bg-black/20 px-3 py-2 text-xs text-muted">{categoryExplanations[selectedCategory.code]}</div>}
+            {fields.length > 0 ? <div className="mt-4 grid gap-3">{fields.map((field) => <Field key={field.key} label={field.label} hint={field.help}><input type={field.type ?? "text"} value={getCompatibilityValue(field.key)} onChange={(e) => updateCompatibilityField(field.key, e.target.value)} placeholder={field.placeholder} min={field.type === "number" ? "0" : undefined} className="admin-input" /></Field>)}</div> : <p className="mt-4 text-xs text-muted">Для этой категории нет преднастроенных полей. Используйте расширенный JSON ниже.</p>}
+            <details className="mt-4"><summary className="cursor-pointer text-xs font-medium text-accent">Расширенный JSON</summary><textarea value={form.compatibility} onChange={(e) => setForm({ ...form, compatibility: e.target.value })} rows={6} className="admin-input mt-2 font-mono text-xs" placeholder={'{\n  "socket": "AM5"\n}'} /><p className="mt-1 text-xs text-muted">Используйте этот режим для параметров, которых нет в быстрых полях.</p></details>
+          </div>
+        </div>
+        <button disabled={saving} className="mt-5 rounded-md bg-accent px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50">{saving ? "Сохраняем…" : editingId ? "Сохранить изменения" : "Добавить комплектующее"}</button>
+      </form>
+
+      <section className="mt-8 rounded-md border border-border p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="font-display text-lg font-semibold">Каталог</h2><p className="mt-1 text-xs text-muted">Поиск работает по названию, категории, характеристикам и совместимости.</p></div>
+          <button type="button" onClick={resetFilters} className="text-xs text-muted hover:text-text">Сбросить фильтры</button>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <Field label="Поиск"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="RTX 4060, Ryzen, AM5…" className="admin-input" /></Field>
+          <Field label="Категория"><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="admin-input"><option value="">Все категории</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></Field>
+          <Field label="Наличие"><select value={stockFilter} onChange={(e) => setStockFilter(e.target.value as "all" | "in" | "out")} className="admin-input"><option value="all">Все</option><option value="in">Только в наличии</option><option value="out">Нет в наличии</option></select></Field>
+          <Field label="Сортировка"><select value={sort} onChange={(e) => setSort(e.target.value as SortOption)} className="admin-input"><option value="name-asc">Название: А → Я</option><option value="name-desc">Название: Я → А</option><option value="price-asc">Цена: сначала дешевле</option><option value="price-desc">Цена: сначала дороже</option><option value="stock">Сначала в наличии</option></select></Field>
+          <Field label="Цена от, ₽"><input type="number" min="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="admin-input" /></Field>
+          <Field label="Цена до, ₽"><input type="number" min="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="admin-input" /></Field>
+        </div>
+      </section>
+
+      {loading ? <p className="mt-6 text-sm text-muted">Загрузка…</p> : filteredComponents.length === 0 ? <p className="mt-6 text-sm text-muted">По заданным фильтрам комплектующие не найдены.</p> : (
+        <VirtualizedComponentTable components={components} onEdit={startEdit} onDelete={handleDelete} onEndReached={loadMore} />
+        {loadingMore && <p className="mt-3 text-center text-xs text-muted">Загружаем следующие комплектующие…</p>}
+      )}
+    </div>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return <label className="block"><span className="text-sm font-medium">{label}</span>{hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}<div className="mt-2">{children}</div></label>;
+}
+
+function DataBlock({ label, value }: { label: string; value: unknown }) {
+  if (value == null) return null;
+  return <div><div className="font-medium text-muted">{label}</div><pre className="mt-1 max-h-32 overflow-auto rounded border border-border bg-black/10 p-2 font-mono text-[11px] whitespace-pre-wrap">{toJsonText(value)}</pre></div>;
+}
+
+function parseJson(value: string, label: string): unknown {
+  if (!value.trim()) return undefined;
+  try { return JSON.parse(value); } catch { throw new Error(`${label}: некорректный JSON`); }
+}
+
+function toJsonText(value: unknown): string {
+  if (value == null) return "";
+  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
