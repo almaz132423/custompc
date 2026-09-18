@@ -15,7 +15,7 @@ export async function login(email: string, password: string): Promise<{ ok: true
 export async function logout(): Promise<void> { await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => {}); }
 export async function getMe(): Promise<AdminUser | null> { try { const res = await fetch(`${API_URL}/auth/me`, { credentials: "include", cache: "no-store" }); if (!res.ok) return null; const data = await res.json(); return data.user ?? null; } catch { return null; } }
 export type Lead = { id: string; name: string; contact: string; budget: string | null; purpose: string | null; category: string | null; pcBuildId: string | null; pcBuild: { id: string; name: string; slug: string; price: string } | null; status: string; comment: string | null; createdAt: string };
-export async function getLeads(): Promise<Lead[]> { try { const res = await fetch(`${API_URL}/leads`, { credentials: "include", cache: "no-store" }); if (!res.ok) return []; return res.json(); } catch { return []; } }
+export async function getPublicLeads(): Promise<Lead[]> { try { const res = await fetch(`${API_URL}/leads`, { credentials: "include", cache: "no-store" }); if (!res.ok) return []; return res.json(); } catch { return []; } }
 export type ComponentCategory = { id: string; code: string; name: string };
 export type Component = { id: string; categoryId: string; manufacturer: string; model: string; price: string | null; specs: unknown; imageUrl: string | null; inStock: boolean; compatibility: unknown; category: ComponentCategory };
 export type ComponentInput = { categoryId: string; manufacturer: string; model: string; price: string; specs?: unknown; imageUrl?: string | null; inStock?: boolean; compatibility?: unknown };
