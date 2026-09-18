@@ -156,6 +156,7 @@ model Component {
   manufacturer  String
   model         String
   price         Decimal?
+  costPrice     Decimal?
   specs         Json?    // произвольные характеристики (частота, объём и т.д.)
   imageUrl      String?
   inStock       Boolean  @default(true)
@@ -320,6 +321,7 @@ model OrderItem {
   name      String
   price     Decimal
   quantity  Int      @default(1)
+  costPrice Decimal?
 }
 
 model OrderStatusHistory {
