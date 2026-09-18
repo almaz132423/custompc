@@ -7,9 +7,10 @@ type Props = {
   components: Component[];
   selectedId?: string;
   onSelect: (component: Component) => void;
+  onEndReached?: () => void;
 };
 
-export function VirtualizedComponentGrid({ components, selectedId, onSelect }: Props) {
+export function VirtualizedComponentGrid({ components, selectedId, onSelect, onEndReached }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewport, setViewport] = useState({ width: 800, height: 620, top: 0 });
 
@@ -30,6 +31,10 @@ export function VirtualizedComponentGrid({ components, selectedId, onSelect }: P
   const firstRow = Math.max(0, Math.floor(viewport.top / rowHeight) - 2);
   const lastRow = Math.min(rowCount, Math.ceil((viewport.top + viewport.height) / rowHeight) + 2);
   const visible = useMemo(() => components.slice(firstRow * columns, lastRow * columns), [components, firstRow, lastRow]);
+
+  useEffect(() => {
+    if (onEndReached && lastRow >= rowCount - 3 && rowCount > 0) onEndReached();
+  }, [lastRow, rowCount, onEndReached]);
 
   return (
     <div ref={viewportRef} className="mt-5 h-[620px] overflow-auto rounded-md">
