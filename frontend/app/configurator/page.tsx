@@ -70,26 +70,6 @@ export default function ConfiguratorPage() {
   }));
   const requestHref = `/request?category=${encodeURIComponent("Конфигуратор")}&budget=${total}&configuration=${requestConfig}`;
 
-  useEffect(() => {
-    if (!activeCategory) return;
-    let cancelled = false;
-    setFiltering(true);
-    setSearch("");
-    getCompatibleConfiguratorComponents(activeCategory.id, selectedComponents.map((component) => component.id))
-      .then((result) => {
-        if (cancelled) return;
-        setAvailableComponents(result.components);
-        setExcludedComponents(result.excluded);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Не удалось подобрать совместимые комплектующие");
-      })
-      .finally(() => {
-        if (!cancelled) setFiltering(false);
-      });
-    return () => { cancelled = true; };
-  }, [activeCategory?.id, selection]);
-
   const loadComponents = useCallback(async (offset = 0, append = false) => {
     if (!activeCategory) return;
     if (append) setLoadingMore(true); else setFiltering(true);
