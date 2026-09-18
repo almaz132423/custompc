@@ -308,6 +308,7 @@ model Order {
 
   items    OrderItem[]
   payments Payment[]
+  statusHistory OrderStatusHistory[]
 }
 
 model OrderItem {
@@ -319,6 +320,18 @@ model OrderItem {
   name      String
   price     Decimal
   quantity  Int      @default(1)
+}
+
+model OrderStatusHistory {
+  id         String           @id @default(cuid())
+  orderId    String
+  order      Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatusStage?
+  toStatus   OrderStatusStage
+  comment    String?
+  createdAt  DateTime         @default(now())
+
+  @@index([orderId, createdAt])
 }
 
 // Раздел 26 ТЗ — храним статус оплаты, без онлайн-эквайринга в MVP
