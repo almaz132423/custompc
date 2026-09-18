@@ -18,6 +18,10 @@ export class UpdateComponentDto {
   price?: string;
 
   @IsOptional()
+  @IsNumberString()
+  costPrice?: string | null;
+
+  @IsOptional()
   specs?: unknown;
 
   @IsOptional()

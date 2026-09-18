@@ -14,6 +14,10 @@ export class CreateComponentDto {
   price!: string;
 
   @IsOptional()
+  @IsNumberString()
+  costPrice?: string;
+
+  @IsOptional()
   specs?: unknown;
 
   @IsOptional()
