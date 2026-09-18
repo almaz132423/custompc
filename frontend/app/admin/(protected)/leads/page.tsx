@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AdminLead, LeadStatus, getLeads, updateLeadStatus } from "@/lib/api";
+import { AdminLead, LeadStatus, createOrderFromLead, getLeads, updateLeadStatus } from "@/lib/api";
 
 const statuses: { value: LeadStatus; label: string }[] = [
   { value: "NEW", label: "Новая" },
@@ -21,6 +21,7 @@ export default function AdminLeadsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [creatingOrder, setCreatingOrder] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -45,6 +46,20 @@ export default function AdminLeadsPage() {
   }, [selected?.id, selected?.status]);
 
   const history = useMemo(() => selected?.statusHistory ?? [], [selected]);
+
+  async function createOrder() {
+    if (!selected) return;
+    setCreatingOrder(true);
+    setError("");
+    try {
+      await createOrderFromLead(selected.id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось создать заказ");
+    } finally {
+      setCreatingOrder(false);
+    }
+  }
 
   async function saveStatus() {
     if (!selected) return;
