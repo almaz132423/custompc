@@ -75,7 +75,7 @@ export class LeadsService {
   findOne(id: string) {
     return this.prisma.lead.findUnique({
       where: { id },
-      include: { pcBuild: { select: { id: true, name: true, slug: true, price: true } }, statusHistory: { orderBy: { createdAt: 'desc' } } },
+      include: { pcBuild: { select: { id: true, name: true, slug: true, price: true } }, order: { select: { id: true, number: true } }, statusHistory: { orderBy: { createdAt: 'desc' } } },
     });
   }
 
@@ -83,6 +83,7 @@ export class LeadsService {
     return this.prisma.lead.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        order: { select: { id: true, number: true } },
         pcBuild: {
           select: { id: true, name: true, slug: true, price: true },
         },
