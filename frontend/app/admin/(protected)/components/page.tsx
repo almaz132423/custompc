@@ -11,6 +11,7 @@ import {
   type Component,
   type ComponentCategory,
 } from "@/lib/api";
+import { VirtualizedComponentTable } from "@/components/virtualized-component-table";
 
 const emptyForm = {
   categoryId: "",
@@ -85,58 +86,57 @@ export default function AdminComponentsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
   const selectedCategory = useMemo(() => categories.find((category) => category.id === form.categoryId), [categories, form.categoryId]);
   const fields = compatibilityFields[selectedCategory?.code ?? ""] ?? [];
 
-  const filteredComponents = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("ru-RU");
-    const min = minPrice === "" ? null : Number(minPrice);
-    const max = maxPrice === "" ? null : Number(maxPrice);
-    const result = components.filter((component) => {
-      const name = `${component.manufacturer} ${component.model}`.toLocaleLowerCase("ru-RU");
-      const category = component.category.name.toLocaleLowerCase("ru-RU");
-      const haystack = `${name} ${category} ${toJsonText(component.specs)} ${toJsonText(component.compatibility)}`.toLocaleLowerCase("ru-RU");
-      const price = Number(component.price);
-      return (!categoryFilter || component.categoryId === categoryFilter)
-        && (!query || haystack.includes(query))
-        && (stockFilter === "all" || (stockFilter === "in" ? component.inStock : !component.inStock))
-        && (min === null || (!Number.isNaN(min) && price >= min))
-        && (max === null || (!Number.isNaN(max) && price <= max));
-    });
-
-    return result.sort((a, b) => {
-      if (sort === "price-asc") return Number(a.price) - Number(b.price);
-      if (sort === "price-desc") return Number(b.price) - Number(a.price);
-      if (sort === "stock") return Number(b.inStock) - Number(a.inStock);
-      const aName = `${a.manufacturer} ${a.model}`;
-      const bName = `${b.manufacturer} ${b.model}`;
-      return sort === "name-desc" ? bName.localeCompare(aName, "ru") : aName.localeCompare(bName, "ru");
-    });
-  }, [components, categoryFilter, search, stockFilter, minPrice, maxPrice, sort]);
-
-  async function loadComponents() {
-    setLoading(true);
+  async function loadComponents(offset = 0, append = false) {
+    if (append) setLoadingMore(true); else setLoading(true);
     setError("");
     try {
-      setComponents(await getComponents());
+      const result = await getComponents({
+        categoryId: categoryFilter || undefined,
+        search: search.trim() || undefined,
+        stock: stockFilter,
+        minPrice: minPrice || undefined,
+        maxPrice: maxPrice || undefined,
+        sort,
+        offset,
+        limit: 50,
+      });
+      setComponents((current) => append ? [...current, ...result.items] : result.items);
+      setHasMore(result.hasMore);
+      setNextOffset(result.nextOffset);
+      setTotalCount(result.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка загрузки");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }
 
+  async function loadMore() {
+    if (!loadingMore && !loading && hasMore && nextOffset !== null) await loadComponents(nextOffset, true);
+  }
+
   useEffect(() => {
-    Promise.all([getComponentCategories(), getComponents()])
-      .then(([loadedCategories, loadedComponents]) => {
+    getComponentCategories()
+      .then((loadedCategories) => {
         setCategories(loadedCategories);
-        setComponents(loadedComponents);
         if (loadedCategories[0]) setForm((current) => ({ ...current, categoryId: current.categoryId || loadedCategories[0].id }));
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Ошибка загрузки"))
-      .finally(() => setLoading(false));
+      .catch((err) => setError(err instanceof Error ? err.message : "Ошибка загрузки"));
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadComponents(0, false), search.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [categoryFilter, search, stockFilter, minPrice, maxPrice, sort]);
 
   function startEdit(component: Component) {
     setEditingId(component.id);
@@ -225,7 +225,7 @@ export default function AdminComponentsPage() {
           <h1 className="font-display text-2xl font-semibold">Комплектующие</h1>
           <p className="mt-2 text-sm text-muted">База компонентов для готовых сборок и конфигуратора.</p>
         </div>
-        <span className="font-mono text-xs text-muted">Показано {filteredComponents.length} из {components.length}</span>
+        <span className="font-mono text-xs text-muted">Загружено {components.length} из {totalCount}</span>
       </div>
 
       {error && <div className="mt-6 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm">{error}</div>}
@@ -269,21 +269,9 @@ export default function AdminComponentsPage() {
         </div>
       </section>
 
-      {loading ? <p className="mt-6 text-sm text-muted">Загрузка…</p> : filteredComponents.length === 0 ? <p className="mt-6 text-sm text-muted">По заданным фильтрам комплектующие не найдены.</p> : (
-        <div className="mt-4 overflow-x-auto rounded-md border border-border">
-          <table className="w-full font-sans text-sm">
-            <thead><tr className="border-b border-border text-left font-mono text-xs text-muted"><th className="px-4 py-3">Фото</th><th className="px-4 py-3">Категория</th><th className="px-4 py-3">Комплектующее</th><th className="px-4 py-3">Цена</th><th className="px-4 py-3">Статус</th><th className="px-4 py-3">Данные</th><th className="px-4 py-3 text-right">Действия</th></tr></thead>
-            <tbody>{filteredComponents.map((component) => <tr key={component.id} className="border-b border-border last:border-0 align-top">
-              <td className="px-4 py-3">{component.imageUrl ? <img src={component.imageUrl} alt="" className="h-12 w-12 rounded object-cover" /> : <div className="flex h-12 w-12 items-center justify-center rounded border border-border text-[10px] text-muted">Нет фото</div>}</td>
-              <td className="px-4 py-3 text-muted">{component.category.name}</td>
-              <td className="px-4 py-3 font-medium">{component.manufacturer} {component.model}</td>
-              <td className="px-4 py-3 whitespace-nowrap font-mono">{formatPrice(component.price)}</td>
-              <td className="px-4 py-3 whitespace-nowrap">{component.inStock ? "В наличии" : "Нет в наличии"}</td>
-              <td className="px-4 py-3 min-w-56">{(component.specs != null || component.compatibility != null) && <details><summary className="cursor-pointer text-xs text-accent">Показать характеристики</summary><div className="mt-2 space-y-2 text-xs"><DataBlock label="Характеристики" value={component.specs} /><DataBlock label="Совместимость" value={component.compatibility} /></div></details>}</td>
-              <td className="px-4 py-3 text-right whitespace-nowrap"><button onClick={() => startEdit(component)} className="mr-3 text-accent hover:underline">Изменить</button><button onClick={() => handleDelete(component)} className="text-red-400 hover:underline">Удалить</button></td>
-            </tr>)}</tbody>
-          </table>
-        </div>
+      {loading ? <p className="mt-6 text-sm text-muted">Загрузка…</p> : components.length === 0 ? <p className="mt-6 text-sm text-muted">По заданным фильтрам комплектующие не найдены.</p> : (
+        <VirtualizedComponentTable components={components} onEdit={startEdit} onDelete={handleDelete} onEndReached={loadMore} />
+        {loadingMore && <p className="mt-3 text-center text-xs text-muted">Загружаем следующие комплектующие…</p>}
       )}
     </div>
   );

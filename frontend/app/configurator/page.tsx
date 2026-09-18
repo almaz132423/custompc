@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { formatPrice, type Component, type ComponentCategory, type CompatibilityIssue } from "@/lib/api";
 import { getCompatibleConfiguratorComponents, getConfiguratorCategories, validateConfigurator, type CompatibleComponentsResponse } from "@/lib/configurator-api";
+import { VirtualizedComponentGrid } from "@/components/virtualized-component-grid";
 
 const CATEGORY_ORDER = ["CPU", "MOTHERBOARD", "RAM", "GPU", "SSD", "PSU", "CASE", "COOLING"];
 const CATEGORY_LABELS: Record<string, string> = {
@@ -32,6 +33,9 @@ export default function ConfiguratorPage() {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [filtering, setFiltering] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -48,6 +52,7 @@ export default function ConfiguratorPage() {
 
   const activeCategory = orderedCategories.find((category) => category.code === activeCode) ?? orderedCategories[0];
   const selectedComponents = orderedCategories.map((category) => selection[category.code]).filter(Boolean) as Component[];
+  const selectedIds = useMemo(() => orderedCategories.map((category) => selection[category.code]).filter(Boolean).map((component) => (component as Component).id), [orderedCategories, selection]);
   const total = selectedComponents.reduce((sum, component) => sum + Number(component.price), 0);
   const completed = selectedComponents.length;
   const requestConfig = encodeURIComponent(JSON.stringify({
@@ -65,31 +70,35 @@ export default function ConfiguratorPage() {
   }));
   const requestHref = `/request?category=${encodeURIComponent("Конфигуратор")}&budget=${total}&configuration=${requestConfig}`;
 
+  const loadComponents = useCallback(async (offset = 0, append = false) => {
+    if (!activeCategory) return;
+    if (append) setLoadingMore(true); else setFiltering(true);
+    try {
+      const result = await getCompatibleConfiguratorComponents(activeCategory.id, selectedIds, { search, offset, limit: 40 });
+      setAvailableComponents((current) => append ? [...current, ...result.components] : result.components);
+      setExcludedComponents((current) => append ? [...current, ...result.excluded] : result.excluded);
+      setHasMore(result.hasMore);
+      setNextOffset(result.nextOffset);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось подобрать совместимые комплектующие");
+    } finally {
+      setFiltering(false);
+      setLoadingMore(false);
+    }
+  }, [activeCategory?.id, selectedIds, search]);
+
   useEffect(() => {
     if (!activeCategory) return;
-    let cancelled = false;
-    setFiltering(true);
-    setSearch("");
-    getCompatibleConfiguratorComponents(activeCategory.id, selectedComponents.map((component) => component.id))
-      .then((result) => {
-        if (cancelled) return;
-        setAvailableComponents(result.components);
-        setExcludedComponents(result.excluded);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Не удалось подобрать совместимые комплектующие");
-      })
-      .finally(() => {
-        if (!cancelled) setFiltering(false);
-      });
-    return () => { cancelled = true; };
-  }, [activeCategory?.id, selection]);
+    setAvailableComponents([]);
+    setExcludedComponents([]);
+    setNextOffset(0);
+    const timer = window.setTimeout(() => loadComponents(0, false), search.trim() ? 250 : 0);
+    return () => window.clearTimeout(timer);
+  }, [activeCategory?.id, selection, search, loadComponents]);
 
-  const filteredComponents = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return availableComponents;
-    return availableComponents.filter((component) => `${component.manufacturer} ${component.model}`.toLowerCase().includes(query));
-  }, [availableComponents, search]);
+  const loadMore = useCallback(() => {
+    if (!loadingMore && !filtering && hasMore && nextOffset !== null) loadComponents(nextOffset, true);
+  }, [filtering, hasMore, loadComponents, loadingMore, nextOffset]);
 
   async function selectComponent(component: Component) {
     const nextSelection = { ...selection, [component.category.code]: component };
@@ -162,7 +171,7 @@ export default function ConfiguratorPage() {
                 <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                   <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по производителю или модели" className="min-w-0 flex-1 rounded-md border border-border bg-surface px-4 py-3 text-sm outline-none placeholder:text-muted focus:border-accent" />
                   <div className="rounded-md border border-border px-4 py-3 text-xs text-muted sm:min-w-44">
-                    {filtering ? "Подбираем…" : `${filteredComponents.length} доступно`}
+                    {filtering ? "Подбираем…" : `${availableComponents.length}${hasMore ? "+" : ""} доступно`}
                   </div>
                 </div>
 
@@ -180,28 +189,10 @@ export default function ConfiguratorPage() {
                   </details>
                 )}
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {filteredComponents.map((component) => {
-                    const selected = selection[component.category.code]?.id === component.id;
-                    return (
-                      <button key={component.id} onClick={() => selectComponent(component)} className={`rounded-md border p-4 text-left transition-colors ${selected ? "border-accent bg-accent-soft" : "border-border hover:border-accent"}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-mono text-xs text-muted">{component.manufacturer}</p>
-                            <p className="mt-1 font-medium">{component.model}</p>
-                          </div>
-                          {selected && <span className="font-mono text-xs text-accent">✓</span>}
-                        </div>
-                        <div className="mt-4 flex items-center justify-between font-mono text-sm">
-                          <span className="text-accent">{formatPrice(component.price)}</span>
-                          <span className="text-xs text-muted">В наличии</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                <VirtualizedComponentGrid components={availableComponents} selectedId={selection[activeCategory.code]?.id} onSelect={selectComponent} onEndReached={loadMore} />
+                {loadingMore && <p className="mt-3 text-center text-xs text-muted">Загружаем следующие комплектующие…</p>}
 
-                {!filtering && filteredComponents.length === 0 && <div className="mt-5 rounded-md border border-border p-6 text-sm text-muted">Совместимых вариантов по этому запросу нет. Попробуйте изменить выбор или поиск.</div>}
+                {!filtering && availableComponents.length === 0 && <div className="mt-5 rounded-md border border-border p-6 text-sm text-muted">Совместимых вариантов по этому запросу нет. Попробуйте изменить выбор или поиск.</div>}
 
                 <div className="mt-6 flex gap-3">
                   {orderedCategories.findIndex((category) => category.code === activeCategory.code) > 0 && (

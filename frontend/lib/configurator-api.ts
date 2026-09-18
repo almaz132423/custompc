@@ -11,24 +11,43 @@ export type ConfiguratorValidation = {
 export type CompatibleComponentsResponse = {
   components: Component[];
   excluded: { id: string; manufacturer: string; model: string; reasons: string[] }[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+  nextOffset: number | null;
 };
 
 export async function getConfiguratorCategories(): Promise<ComponentCategory[]> {
-  const res = await fetch(`${API_URL}/configurator/categories`, { cache: "no-store" });
+  const res = await fetch(API_URL + "/configurator/categories", { cache: "no-store" });
   if (!res.ok) throw new Error("Не удалось загрузить категории");
   return res.json();
 }
 
-export async function getConfiguratorComponents(categoryId?: string): Promise<Component[]> {
-  const query = categoryId ? `?categoryId=${encodeURIComponent(categoryId)}` : "";
-  const res = await fetch(`${API_URL}/configurator/components${query}`, { cache: "no-store" });
+export async function getConfiguratorComponents(categoryId?: string, search?: string, offset = 0, limit = 40) {
+  const query = new URLSearchParams();
+  if (categoryId) query.set("categoryId", categoryId);
+  if (search) query.set("search", search);
+  query.set("offset", String(offset));
+  query.set("limit", String(limit));
+  const res = await fetch(API_URL + "/configurator/components?" + query.toString(), { cache: "no-store" });
   if (!res.ok) throw new Error("Не удалось загрузить комплектующие");
-  return res.json();
+  return res.json() as Promise<{ components: Component[]; total: number; offset: number; limit: number; hasMore: boolean; nextOffset: number | null }>;
 }
 
-export async function getCompatibleConfiguratorComponents(categoryId: string, selectedIds: string[]): Promise<CompatibleComponentsResponse> {
-  const query = new URLSearchParams({ categoryId, selectedIds: selectedIds.join(",") });
-  const res = await fetch(`${API_URL}/configurator/compatible-components?${query.toString()}`, { cache: "no-store" });
+export async function getCompatibleConfiguratorComponents(
+  categoryId: string,
+  selectedIds: string[],
+  options: { search?: string; offset?: number; limit?: number } = {},
+): Promise<CompatibleComponentsResponse> {
+  const query = new URLSearchParams({
+    categoryId,
+    selectedIds: selectedIds.join(","),
+    offset: String(options.offset ?? 0),
+    limit: String(options.limit ?? 40),
+  });
+  if (options.search) query.set("search", options.search);
+  const res = await fetch(API_URL + "/configurator/compatible-components?" + query.toString(), { cache: "no-store" });
   if (!res.ok) {
     const data = await res.json().catch(() => null);
     const message = data?.message;
@@ -38,7 +57,7 @@ export async function getCompatibleConfiguratorComponents(categoryId: string, se
 }
 
 export async function validateConfigurator(componentIds: string[]): Promise<ConfiguratorValidation> {
-  const res = await fetch(`${API_URL}/configurator/validate`, {
+  const res = await fetch(API_URL + "/configurator/validate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ componentIds }),
