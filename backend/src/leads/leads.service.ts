@@ -1,15 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CompatibilityService } from '../pc-build-components/compatibility.service.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
 import { UpdateLeadStatusDto } from './dto/update-lead-status.dto.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 @Injectable()
 export class LeadsService {
+  private readonly logger = new Logger(LeadsService.name);
   constructor(
     private prisma: PrismaService,
     private compatibilityService: CompatibilityService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreateLeadDto) {
@@ -41,7 +44,7 @@ export class LeadsService {
       };
     }
 
-    return this.prisma.lead.create({
+    const lead = await this.prisma.lead.create({
       data: {
         name: dto.name,
         contact: dto.contact,
@@ -53,6 +56,20 @@ export class LeadsService {
         configuration: configuration as Prisma.InputJsonValue | undefined,
       },
     });
+
+    void this.notificationsService.notifyNewLead({
+      id: lead.id,
+      name: lead.name,
+      contact: lead.contact,
+      status: lead.status,
+      budget: lead.budget?.toString(),
+      purpose: lead.purpose,
+      comment: lead.comment,
+    }).catch((error) =>
+      this.logger.error(`New lead notification failed: ${error instanceof Error ? error.message : String(error)}`),
+    );
+
+    return lead;
   }
 
   // Пригодится для раздела 37 ТЗ (управление заявками в админке)
@@ -71,7 +88,27 @@ export class LeadsService {
         await tx.leadStatusHistory.create({ data: { leadId: id, fromStatus: lead.status, toStatus: lead.status, comment: dto.comment.trim() } });
       }
     });
-    return this.findOne(id);
+    const updatedLead = await this.findOne(id);
+    if (!updatedLead) throw new NotFoundException('Заявка не найдена');
+    if (lead.status !== dto.status) {
+      void this.notificationsService.notifyLeadStatusChanged({
+        lead: {
+          id: updatedLead.id,
+          name: updatedLead.name,
+          contact: updatedLead.contact,
+          status: updatedLead.status,
+          budget: updatedLead.budget?.toString(),
+          purpose: updatedLead.purpose,
+          comment: updatedLead.comment,
+        },
+        fromStatus: lead.status,
+        toStatus: dto.status,
+        comment: dto.comment,
+      }).catch((error) =>
+        this.logger.error(`Lead status notification failed: ${error instanceof Error ? error.message : String(error)}`),
+      );
+    }
+    return updatedLead;
   }
 
 

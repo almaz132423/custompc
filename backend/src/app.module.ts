@@ -10,6 +10,7 @@ import { ComponentsModule } from './components/components.module.js';
 import { PcBuildComponentsModule } from './pc-build-components/pc-build-components.module.js';
 import { CompatibilityRulesModule } from './compatibility-rules/compatibility-rules.module.js';
 import { OrdersModule } from './orders/orders.module.js';
+import { NotificationsModule } from './notifications/notifications.module.js';
 
-@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule, OrdersModule], controllers: [AppController], providers: [AppService] })
+@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule, OrdersModule, NotificationsModule], controllers: [AppController], providers: [AppService] })
 export class AppModule {}
