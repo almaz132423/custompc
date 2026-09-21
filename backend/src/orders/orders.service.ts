@@ -194,7 +194,7 @@ export class OrdersService {
       throw new BadRequestException('Сумма платежа превышает остаток по заказу');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.payment.create({
         data: {
           orderId: id,
