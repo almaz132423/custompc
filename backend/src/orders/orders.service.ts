@@ -105,6 +105,12 @@ export class OrdersService {
       throw new BadRequestException('Нет изменений для сохранения');
     }
 
+    if (dto.status && dto.status !== order.status && !this.isAllowedStatusTransition(order.status, dto.status)) {
+      throw new BadRequestException(
+        `Недопустимый переход статуса заказа: ${order.status} → ${dto.status}`,
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const data: Prisma.OrderUpdateInput = {};
       if (dto.status) data.status = dto.status;
@@ -162,6 +168,17 @@ export class OrdersService {
       const status: OrderStatusStage =
         order.status === 'NEW' && paymentStatus === 'PAID' ? 'PAID' : order.status;
 
+      if (status !== order.status) {
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: id,
+            fromStatus: order.status,
+            toStatus: status,
+            comment: 'Статус изменён автоматически после полной оплаты',
+          },
+        });
+      }
+
       return tx.order.update({
         where: { id },
         data: { paymentStatus, status },
@@ -202,6 +219,22 @@ export class OrdersService {
     });
     if (!order) throw new NotFoundException('Заказ не найден');
     return order;
+  }
+
+  private isAllowedStatusTransition(from: OrderStatusStage, to: OrderStatusStage) {
+    const transitions: Record<OrderStatusStage, OrderStatusStage[]> = {
+      NEW: ['AWAITING_PAYMENT', 'PAID'],
+      AWAITING_PAYMENT: ['PAID'],
+      PAID: ['PURCHASING'],
+      PURCHASING: ['COMPONENTS_RECEIVED'],
+      COMPONENTS_RECEIVED: ['ASSEMBLY'],
+      ASSEMBLY: ['TESTING'],
+      TESTING: ['ASSEMBLY', 'READY'],
+      READY: ['ISSUED'],
+      ISSUED: ['COMPLETED'],
+      COMPLETED: [],
+    };
+    return transitions[from].includes(to);
   }
 
   private calculateBuildCost(
