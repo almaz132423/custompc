@@ -57,7 +57,15 @@ export class LeadsService {
       },
     });
 
-    void this.notificationsService.notifyNewLead(lead).catch((error) =>
+    void this.notificationsService.notifyNewLead({
+      id: lead.id,
+      name: lead.name,
+      contact: lead.contact,
+      status: lead.status,
+      budget: lead.budget?.toString(),
+      purpose: lead.purpose,
+      comment: lead.comment,
+    }).catch((error) =>
       this.logger.error(`New lead notification failed: ${error instanceof Error ? error.message : String(error)}`),
     );
 
@@ -81,9 +89,18 @@ export class LeadsService {
       }
     });
     const updatedLead = await this.findOne(id);
+    if (!updatedLead) throw new NotFoundException('Заявка не найдена');
     if (lead.status !== dto.status) {
       void this.notificationsService.notifyLeadStatusChanged({
-        lead: updatedLead as any,
+        lead: {
+          id: updatedLead.id,
+          name: updatedLead.name,
+          contact: updatedLead.contact,
+          status: updatedLead.status,
+          budget: updatedLead.budget?.toString(),
+          purpose: updatedLead.purpose,
+          comment: updatedLead.comment,
+        },
         fromStatus: lead.status,
         toStatus: dto.status,
         comment: dto.comment,
