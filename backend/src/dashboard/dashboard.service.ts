@@ -122,6 +122,9 @@ export class DashboardService {
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException('Некорректная дата ' + field);
     }
+    if (field === 'to' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value)) {
+      date.setUTCDate(date.getUTCDate() + 1);
+    }
     return date;
   }
 
