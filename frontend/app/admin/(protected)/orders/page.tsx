@@ -16,6 +16,19 @@ const orderStatuses: Record<string, string> = {
   COMPLETED: "Завершён",
 };
 
+const orderTransitions: Record<OrderStatus, OrderStatus[]> = {
+  NEW: ["AWAITING_PAYMENT", "PAID"],
+  AWAITING_PAYMENT: ["PAID"],
+  PAID: ["PURCHASING"],
+  PURCHASING: ["COMPONENTS_RECEIVED"],
+  COMPONENTS_RECEIVED: ["ASSEMBLY"],
+  ASSEMBLY: ["TESTING"],
+  TESTING: ["ASSEMBLY", "READY"],
+  READY: ["ISSUED"],
+  ISSUED: ["COMPLETED"],
+  COMPLETED: [],
+};
+
 const paymentStatuses: Record<string, string> = {
   UNPAID: "Не оплачено",
   PARTIALLY_PAID: "Частично оплачено",
@@ -104,7 +117,7 @@ export default function AdminOrdersPage() {
           <h2 className="text-lg font-semibold">{selected.number}</h2>
           <div className="mt-1 text-sm text-muted">{selected.customer.name} · {selected.customer.phone}</div>
           <div className="mt-5 space-y-4">
-            <label className="block text-sm"><span className="font-medium">Статус выполнения</span><select value={status} onChange={e => setStatus(e.target.value as OrderStatus)} className="admin-input mt-2">{Object.entries(orderStatuses).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+            <label className="block text-sm"><span className="font-medium">Статус выполнения</span><select value={status} onChange={e => setStatus(e.target.value as OrderStatus)} className="admin-input mt-2">{[status, ...(orderTransitions[status] ?? [])].filter((value, index, values) => values.indexOf(value) === index).map(value => <option key={value} value={value}>{orderStatuses[value] ?? value}</option>)}</select>{(orderTransitions[status] ?? []).length === 0 ? <span className="mt-1 block text-xs text-muted">Для этого статуса дальнейших переходов нет.</span> : <span className="mt-1 block text-xs text-muted">Доступны только следующие этапы workflow.</span>}</label>
             <label className="block text-sm"><span className="font-medium">Статус оплаты</span><select value={paymentStatus} onChange={e => setPaymentStatus(e.target.value as PaymentStatus)} className="admin-input mt-2">{Object.entries(paymentStatuses).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="block text-sm"><span className="font-medium">Комментарий</span><textarea value={orderComment} onChange={e => setOrderComment(e.target.value)} rows={3} className="admin-input mt-2" placeholder="Комментарий по заказу или изменению статуса" /></label>
             <button onClick={saveOrder} disabled={saving} className="admin-button w-full">{saving ? "Сохраняем…" : "Сохранить изменения"}</button>
