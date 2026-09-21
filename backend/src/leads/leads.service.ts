@@ -61,6 +61,8 @@ export class LeadsService {
     if (!lead) throw new NotFoundException('Заявка не найдена');
     if (lead.status === dto.status && !dto.comment?.trim()) return this.findOne(id);
 
+    this.validateStatusTransition(lead.status, dto.status);
+
     await this.prisma.$transaction(async (tx) => {
       if (lead.status !== dto.status) {
         await tx.lead.update({ where: { id }, data: { status: dto.status } });
@@ -70,6 +72,22 @@ export class LeadsService {
       }
     });
     return this.findOne(id);
+  }
+
+
+  private validateStatusTransition(from: string, to: string) {
+    const allowed: Record<string, string[]> = {
+      NEW: ['IN_PROGRESS', 'REJECTED'],
+      IN_PROGRESS: ['CONTACTED', 'CALCULATED', 'REJECTED'],
+      CONTACTED: ['CALCULATED', 'IN_PROGRESS', 'REJECTED'],
+      CALCULATED: ['AGREED', 'IN_PROGRESS', 'REJECTED'],
+      AGREED: ['ORDER', 'CALCULATED', 'REJECTED'],
+      ORDER: ['AGREED'],
+      REJECTED: ['IN_PROGRESS', 'NEW'],
+    };
+    if (from !== to && !allowed[from]?.includes(to)) {
+      throw new BadRequestException(`Недопустимый переход статуса: ${from} → ${to}`);
+    }
   }
 
   findOne(id: string) {
