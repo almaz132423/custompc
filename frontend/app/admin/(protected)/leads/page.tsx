@@ -47,6 +47,17 @@ export default function AdminLeadsPage() {
 
   const history = useMemo(() => selected?.statusHistory ?? [], [selected]);
 
+  const transitions: Record<LeadStatus, LeadStatus[]> = {
+    NEW: ["IN_PROGRESS", "REJECTED"],
+    IN_PROGRESS: ["CONTACTED", "CALCULATED", "REJECTED"],
+    CONTACTED: ["CALCULATED", "IN_PROGRESS", "REJECTED"],
+    CALCULATED: ["AGREED", "IN_PROGRESS", "REJECTED"],
+    AGREED: ["ORDER", "CALCULATED", "REJECTED"],
+    ORDER: [],
+    REJECTED: ["IN_PROGRESS", "NEW"],
+  };
+  const availableStatuses = [status, ...transitions[selected?.status ?? "NEW"]].filter((value, index, values) => values.indexOf(value) === index);
+
   async function createOrder() {
     if (!selected) return;
     setCreatingOrder(true);
@@ -127,7 +138,7 @@ export default function AdminLeadsPage() {
               <label className="block">
                 <span className="text-sm font-medium">Статус</span>
                 <select value={status} onChange={(e) => setStatus(e.target.value as LeadStatus)} className="admin-input mt-2">
-                  {statuses.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  {statuses.filter((item) => availableStatuses.includes(item.value)).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                 </select>
               </label>
               <label className="block">
