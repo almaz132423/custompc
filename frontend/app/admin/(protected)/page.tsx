@@ -1,95 +1,17 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import { getLeads, purposeLabel, type Lead } from "@/lib/api";
-
-const STATUS_LABELS: Record<string, string> = {
-  NEW: "Новая",
-  IN_PROGRESS: "В работе",
-  CONTACTED: "Связались",
-  CALCULATED: "Расчёт подготовлен",
-  AGREED: "Согласовано",
-  ORDER: "Заказ",
-  REJECTED: "Отказ",
-};
-
-export default function AdminDashboardPage() {
-  const [leads, setLeads] = useState<Lead[] | null>(null);
-
-  useEffect(() => {
-    getLeads().then(setLeads);
-  }, []);
-
-  return (
-    <div>
-      <h1 className="font-display text-2xl font-semibold">Заявки</h1>
-      <p className="mt-2 text-sm text-muted">
-        {leads ? `Всего: ${leads.length}` : "Загрузка…"}
-      </p>
-
-      {leads && leads.length === 0 && (
-        <p className="mt-10 text-muted">Пока нет ни одной заявки.</p>
-      )}
-
-      {leads && leads.length > 0 && (
-        <div className="mt-8 overflow-x-auto rounded-md border border-border">
-          <table className="w-full font-sans text-sm">
-            <thead>
-              <tr className="border-b border-border text-left font-mono text-xs text-muted">
-                <th className="px-4 py-3">Дата</th>
-                <th className="px-4 py-3">Имя</th>
-                <th className="px-4 py-3">Контакт</th>
-                <th className="px-4 py-3">Категория</th>
-                <th className="px-4 py-3">ПК</th>
-                <th className="px-4 py-3">Бюджет</th>
-                <th className="px-4 py-3">Назначение</th>
-                <th className="px-4 py-3">Статус</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead) => (
-                <tr key={lead.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-3 font-mono text-xs text-muted">
-                    {new Date(lead.createdAt).toLocaleDateString("ru-RU")}
-                  </td>
-                  <td className="px-4 py-3">{lead.name}</td>
-                  <td className="px-4 py-3 font-mono">{lead.contact}</td>
-                  <td className="px-4 py-3">{lead.category ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    {lead.pcBuild ? (
-                      <LinkToBuild slug={lead.pcBuild.slug} name={lead.pcBuild.name} />
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-4 py-3 font-mono">
-                    {lead.budget ? `${lead.budget} ₽` : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {lead.purpose ? purposeLabel(lead.purpose) : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="rounded border border-border px-2 py-1 font-mono text-xs">
-                      {STATUS_LABELS[lead.status] ?? lead.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function LinkToBuild({ slug, name }: { slug: string; name: string }) {
-  return (
-    <a
-      href={`/pc/${encodeURIComponent(slug)}`}
-      className="text-accent underline-offset-2 hover:underline"
-    >
-      {name}
-    </a>
-  );
-}
+import { useEffect,useState } from "react"; import { getDashboardSummary,type DashboardSummary } from "@/lib/api";
+const leadLabels={new:"Новые",inProgress:"В работе",contacted:"Связались",calculated:"Расчёт",agreed:"Согласовано",orders:"Заказ",rejected:"Отказ"};
+const orderLabels={new:"Новые",awaitingPayment:"Ожидают оплаты",paid:"Оплачены",purchasing:"Закупка",componentsReceived:"Получены",assembly:"Сборка",testing:"Тестирование",ready:"Готовы",issued:"Выданы",completed:"Завершены"};
+const money=(v:number|null)=>v==null?"—":new Intl.NumberFormat("ru-RU",{maximumFractionDigits:0}).format(v)+" ₽";
+export default function AdminDashboardPage(){const[data,setData]=useState<DashboardSummary|null>(null);const[days,setDays]=useState("30");const[loading,setLoading]=useState(true);const[error,setError]=useState("");
+async function load(){setLoading(true);setError("");const to=new Date(),from=new Date(to);from.setDate(from.getDate()-Number(days));try{setData(await getDashboardSummary(from.toISOString().slice(0,10),to.toISOString().slice(0,10)))}catch(e){setError(e instanceof Error?e.message:"Не удалось загрузить Dashboard")}finally{setLoading(false)}}
+useEffect(()=>{load()},[days]);
+return <div><div className="flex flex-wrap items-end justify-between gap-4"><div><h1 className="font-display text-2xl font-semibold">Dashboard</h1><p className="mt-2 text-sm text-muted">Заявки, заказы и финансовые показатели</p></div><div className="flex gap-2"><select value={days} onChange={e=>setDays(e.target.value)} className="admin-input w-auto"><option value="7">7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select><button onClick={load} disabled={loading} className="admin-button-secondary">Обновить</button></div></div>
+{error&&<div className="mt-5 rounded-md border border-red-400/40 bg-red-400/10 p-3 text-sm">{error}</div>}{loading&&!data?<p className="mt-10 text-muted">Загрузка Dashboard…</p>:data&&<><div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Metric t="Заявки" v={String(data.leads.total)} d={"Новых: "+data.leads.new}/><Metric t="Заказы" v={String(data.orders.total)} d={"Готовых: "+data.orders.ready}/><Metric t="Продажи" v={money(data.finance.sales)} d={"Заказов: "+data.finance.ordersCount}/><Metric t="Получено" v={money(data.finance.paid)} d={"Платежей: "+data.finance.paymentsCount}/></div>
+<div className="mt-5 grid gap-5 lg:grid-cols-2"><Card t="Воронка заявок"><Grid data={data.leads} labels={leadLabels}/></Card><Card t="Этапы заказов"><Grid data={data.orders} labels={orderLabels}/></Card></div>
+<div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Metric t="Себестоимость" v={money(data.finance.cost)} d="по заказам периода"/><Metric t="Прибыль" v={money(data.finance.profit)} d="если себестоимость известна"/><Metric t="К оплате" v={money(data.finance.outstanding)} d="по заказам периода"/><Metric t="Заказов" v={String(data.finance.ordersCount)} d="за период"/></div>
+<div className="mt-5 grid gap-5 lg:grid-cols-2"><Card t="Последние заявки">{data.recent.leads.map(x=><Row key={x.id} a={x.name} b={x.contact} c={x.status}/>)}</Card><Card t="Последние заказы">{data.recent.orders.map(x=><Row key={x.id} a={x.number} b={x.status} c={money(Number(x.totalPrice))}/>)}</Card></div></>}</div>}
+function Metric(p:{t:string;v:string;d:string}){return <div className="rounded-lg border border-border p-5"><div className="text-sm text-muted">{p.t}</div><div className="mt-2 text-2xl font-semibold">{p.v}</div><div className="mt-1 text-xs text-muted">{p.d}</div></div>}
+function Card(p:{t:string;children:React.ReactNode}){return <section className="rounded-lg border border-border p-5"><h2 className="font-medium">{p.t}</h2><div className="mt-4">{p.children}</div></section>}
+function Grid(p:{data:Record<string,unknown>;labels:Record<string,string>}){return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{Object.entries(p.labels).map(([k,l])=><div key={k} className="rounded-md border border-border p-3"><div className="text-xs text-muted">{l}</div><div className="mt-1 text-xl font-semibold">{String(p.data[k]??0)}</div></div>)}</div>}
+function Row(p:{a:string;b:string;c:string}){return <div className="flex items-center justify-between gap-4 border-b border-border py-3 last:border-0"><div><div className="font-medium">{p.a}</div><div className="text-xs text-muted">{p.b}</div></div><div className="text-sm">{p.c}</div></div>}
