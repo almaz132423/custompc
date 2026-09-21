@@ -82,7 +82,7 @@ export class LeadsService {
       CONTACTED: ['CALCULATED', 'IN_PROGRESS', 'REJECTED'],
       CALCULATED: ['AGREED', 'IN_PROGRESS', 'REJECTED'],
       AGREED: ['ORDER', 'CALCULATED', 'REJECTED'],
-      ORDER: ['AGREED'],
+      ORDER: [],
       REJECTED: ['IN_PROGRESS', 'NEW'],
     };
     if (from !== to && !allowed[from]?.includes(to)) {
