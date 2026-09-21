@@ -1,12 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { OrderStatusStage, PaymentStatus, Prisma } from '@prisma/client';
 import { UpdateOrderDto } from './dto/update-order.dto.js';
 import { AddPaymentDto } from './dto/add-payment.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(OrdersService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async createFromLead(leadId: string) {
     const lead = await this.prisma.lead.findUnique({
@@ -64,7 +70,7 @@ export class OrdersService {
     const profit = costPrice === null ? null : totalPrice - costPrice;
 
     const number = `ORD-${Date.now().toString(36).toUpperCase()}`;
-    return this.prisma.$transaction(async (tx) => {
+    const order = await this.prisma.$transaction(async (tx) => {
       const customer = lead.customerId
         ? await tx.customer.findUnique({ where: { id: lead.customerId } })
         : await tx.customer.create({ data: { name: lead.name, phone: lead.contact } });
@@ -96,6 +102,20 @@ export class OrdersService {
       await tx.lead.update({ where: { id: lead.id }, data: { status: 'ORDER' } });
       return order;
     });
+
+    void this.notificationsService.notifyOrderCreated({
+      id: order.id,
+      number: order.number,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalPrice: order.totalPrice.toString(),
+      customerName: order.customer?.name,
+      leadName: order.lead?.name,
+    }).catch((error) =>
+      this.logger.error(`Order creation notification failed: ${error instanceof Error ? error.message : String(error)}`),
+    );
+
+    return order;
   }
 
   async update(id: string, dto: UpdateOrderDto) {
@@ -111,7 +131,7 @@ export class OrdersService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const data: Prisma.OrderUpdateInput = {};
       if (dto.status) data.status = dto.status;
       if (dto.paymentStatus) data.paymentStatus = dto.paymentStatus;
@@ -141,6 +161,27 @@ export class OrdersService {
       }
       return updated;
     });
+
+    if (dto.status && dto.status !== order.status) {
+      void this.notificationsService.notifyOrderStatusChanged({
+        order: {
+          id: updated.id,
+          number: updated.number,
+          status: updated.status,
+          paymentStatus: updated.paymentStatus,
+          totalPrice: updated.totalPrice.toString(),
+          customerName: updated.customer?.name,
+          leadName: updated.lead?.name,
+        },
+        fromStatus: order.status,
+        toStatus: dto.status,
+        comment: dto.comment,
+      }).catch((error) =>
+        this.logger.error(`Order status notification failed: ${error instanceof Error ? error.message : String(error)}`),
+      );
+    }
+
+    return updated;
   }
 
   async addPayment(id: string, dto: AddPaymentDto) {
@@ -191,6 +232,20 @@ export class OrdersService {
         },
       });
     });
+
+    void this.notificationsService.notifyPaymentAdded({
+      id: updated.id,
+      number: updated.number,
+      status: updated.status,
+      paymentStatus: updated.paymentStatus,
+      totalPrice: updated.totalPrice.toString(),
+      customerName: updated.customer?.name,
+      leadName: updated.lead?.name,
+    }, dto.amount).catch((error) =>
+      this.logger.error(`Payment notification failed: ${error instanceof Error ? error.message : String(error)}`),
+    );
+
+    return updated;
   }
 
   findAll() {
