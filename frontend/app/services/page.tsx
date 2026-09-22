@@ -1,66 +1,15 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { getPublicServices, type Service } from "@/lib/api";
 
 export const metadata = {
   title: "Услуги — CustomPS",
 };
 
-// Пока раздаётся статично на фронтенде. Модель Service в Prisma-схеме уже
-// готова под управление из админки (раздел 27, 41 ТЗ) — перенесём туда,
-// когда дойдём до соответствующего раздела админки.
-const SERVICES = [
-  {
-    title: "Сборка ПК",
-    description: "Подберём комплектующие и соберём компьютер под ваши задачи и бюджет.",
-    priceFrom: "от 3 000 ₽",
-    duration: "1-3 дня",
-  },
-  {
-    title: "Подбор комплектующих",
-    description: "Поможем подобрать совместимые компоненты под конкретную задачу.",
-    priceFrom: "бесплатно при заказе сборки",
-    duration: "1 день",
-  },
-  {
-    title: "Апгрейд",
-    description: "Увеличим производительность существующего компьютера.",
-    priceFrom: "от 1 500 ₽",
-    duration: "1 день",
-  },
-  {
-    title: "Ремонт",
-    description: "Диагностика и устранение неисправностей.",
-    priceFrom: "от 500 ₽",
-    duration: "1-2 дня",
-  },
-  {
-    title: "Диагностика",
-    description: "Полная проверка компьютера, поиск причин сбоев и проблем.",
-    priceFrom: "от 500 ₽",
-    duration: "1 день",
-  },
-  {
-    title: "Чистка и замена термопасты",
-    description: "Профилактическое обслуживание — чистка от пыли, свежая термопаста.",
-    priceFrom: "от 800 ₽",
-    duration: "1 день",
-  },
-  {
-    title: "Установка ОС и драйверов",
-    description: "Установка и настройка Windows, всех необходимых драйверов.",
-    priceFrom: "от 700 ₽",
-    duration: "1 день",
-  },
-  {
-    title: "Настройка BIOS и программ",
-    description: "Тонкая настройка BIOS, установка и настройка нужных программ.",
-    priceFrom: "от 500 ₽",
-    duration: "1 день",
-  },
-];
+export default async function ServicesPage() {
+  const services = await getPublicServices();
 
-export default function ServicesPage() {
   return (
     <div className="min-h-screen bg-ink">
       <SiteHeader />
@@ -72,38 +21,62 @@ export default function ServicesPage() {
           от подбора и сборки до ремонта и апгрейда.
         </p>
 
-        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {SERVICES.map((service) => (
-            <div
-              key={service.title}
-              className="flex flex-col justify-between rounded-md border border-border bg-surface p-6"
-            >
-              <div>
-                <h2 className="font-display text-lg font-semibold">
-                  {service.title}
-                </h2>
-                <p className="mt-2 text-sm text-muted">
-                  {service.description}
-                </p>
-              </div>
-
-              <div className="mt-6 flex items-center justify-between font-mono text-xs text-muted">
-                <span>{service.priceFrom}</span>
-                <span>{service.duration}</span>
-              </div>
-
-              <Link
-                href={`/request?category=${encodeURIComponent(service.title)}`}
-                className="mt-4 rounded-md border border-border px-4 py-2 text-center font-sans text-sm transition-colors hover:border-accent hover:bg-ink"
-              >
-                Заказать
-              </Link>
-            </div>
-          ))}
-        </div>
+        {services.length === 0 ? (
+          <div className="mt-10 rounded-md border border-border bg-surface p-6 text-sm text-muted">
+            Сейчас услуги не опубликованы. Оставьте заявку, и мы свяжемся с вами.
+          </div>
+        ) : (
+          <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {services.map((service) => (
+              <ServiceCard key={service.id} service={service} />
+            ))}
+          </div>
+        )}
       </main>
 
       <SiteFooter />
     </div>
   );
+}
+
+function ServiceCard({ service }: { service: Service }) {
+  return (
+    <div className="flex flex-col justify-between rounded-md border border-border bg-surface p-6">
+      <div>
+        <span className="font-mono text-[11px] uppercase tracking-wide text-muted">
+          {serviceTypeLabel(service.type)}
+        </span>
+        <h2 className="mt-2 font-display text-lg font-semibold">{service.name}</h2>
+        {service.description && <p className="mt-2 text-sm text-muted">{service.description}</p>}
+      </div>
+
+      <div className="mt-6 flex items-center justify-between gap-4 font-mono text-xs text-muted">
+        <span>{formatServicePrice(service)}</span>
+        <span>{service.durationDays ? `${service.durationDays} дн.` : "Срок уточняется"}</span>
+      </div>
+
+      <Link
+        href={`/request?category=${encodeURIComponent(service.name)}`}
+        className="mt-4 rounded-md border border-border px-4 py-2 text-center font-sans text-sm transition-colors hover:border-accent hover:bg-ink"
+      >
+        Заказать
+      </Link>
+    </div>
+  );
+}
+
+function serviceTypeLabel(type: Service["type"]) {
+  return {
+    BUILD: "Сборка",
+    UPGRADE: "Апгрейд",
+    REPAIR: "Ремонт",
+    MAINTENANCE: "Обслуживание",
+  }[type];
+}
+
+function formatServicePrice(service: Service) {
+  if (service.priceFrom && service.priceTo) return `${Number(service.priceFrom).toLocaleString("ru-RU")}–${Number(service.priceTo).toLocaleString("ru-RU")} ₽`;
+  if (service.priceFrom) return `от ${Number(service.priceFrom).toLocaleString("ru-RU")} ₽`;
+  if (service.priceTo) return `до ${Number(service.priceTo).toLocaleString("ru-RU")} ₽`;
+  return "Цена уточняется";
 }
