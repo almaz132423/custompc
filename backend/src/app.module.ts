@@ -11,6 +11,7 @@ import { PcBuildComponentsModule } from './pc-build-components/pc-build-componen
 import { CompatibilityRulesModule } from './compatibility-rules/compatibility-rules.module.js';
 import { OrdersModule } from './orders/orders.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
+import { SiteSettingsModule } from './site-settings/site-settings.module.js';
 
-@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule, OrdersModule, NotificationsModule], controllers: [AppController], providers: [AppService] })
+@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule, OrdersModule, NotificationsModule, SiteSettingsModule], controllers: [AppController], providers: [AppService] })
 export class AppModule {}
