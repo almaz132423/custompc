@@ -63,7 +63,7 @@ export class PortfolioService {
     return { ok: true };
   }
 
-  private toData(dto: CreatePortfolioDto | UpdatePortfolioDto): Prisma.PortfolioUncheckedCreateInput | Prisma.PortfolioUncheckedUpdateInput {
+  private toData(dto: CreatePortfolioDto | UpdatePortfolioDto): Prisma.PortfolioCreateInput | Prisma.PortfolioUpdateInput {
     const imageUrls = dto.imageUrls;
     return {
       ...(dto.slug !== undefined && { slug: dto.slug.trim() }),
@@ -84,11 +84,10 @@ export class PortfolioService {
     };
   }
 
-  private parseJson(value: string): Prisma.InputJsonValue | null {
-    if (!value.trim()) return null;
+  private parseJson(value: string): Prisma.InputJsonValue | Prisma.JsonNull {
+    if (!value.trim()) return Prisma.JsonNull;
     try {
-      const parsed = JSON.parse(value);
-      return parsed as Prisma.InputJsonValue;
+      return JSON.parse(value) as Prisma.InputJsonValue;
     } catch {
       return value;
     }
