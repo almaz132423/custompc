@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, Max, Min, MaxLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Max, Min, MaxLength } from 'class-validator';
 
 export class CreateReviewDto {
   @IsString()
@@ -22,5 +22,6 @@ export class CreateReviewDto {
   purchasedBuild?: string;
 
   @IsOptional()
+  @IsBoolean()
   isPublished?: boolean;
 }
