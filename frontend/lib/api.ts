@@ -202,3 +202,49 @@ export async function deletePortfolio(id: string): Promise<void> {
   const res = await fetch(`${API_URL}/portfolio/admin/${id}`, { method: "DELETE", credentials: "include" });
   if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить работу"));
 }
+
+
+export type Review = {
+  id: string;
+  customerName: string;
+  text: string;
+  rating: number;
+  photoUrl: string | null;
+  purchasedBuild: string | null;
+  isPublished: boolean;
+  createdAt: string;
+};
+export type ReviewInput = {
+  customerName: string;
+  text: string;
+  rating: number;
+  photoUrl?: string;
+  purchasedBuild?: string;
+  isPublished?: boolean;
+};
+export async function getPublicReviews(): Promise<Review[]> {
+  try {
+    const res = await fetch(`${API_URL}/reviews`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
+}
+export async function getAdminReviews(): Promise<Review[]> {
+  const res = await fetch(`${API_URL}/reviews/admin`, { credentials: "include", cache: "no-store" });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить отзывы"));
+  return res.json();
+}
+export async function createReview(input: ReviewInput): Promise<Review> {
+  const res = await fetch(`${API_URL}/reviews/admin`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать отзыв"));
+  return res.json();
+}
+export async function updateReview(id: string, input: Partial<ReviewInput>): Promise<Review> {
+  const res = await fetch(`${API_URL}/reviews/admin/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить отзыв"));
+  return res.json();
+}
+export async function deleteReview(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/reviews/admin/${id}`, { method: "DELETE", credentials: "include" });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить отзыв"));
+}

@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/configurator", label: "Конфигуратор" },
   { href: "/services", label: "Услуги" },
   { href: "/portfolio", label: "Портфолио" },
+  { href: "/reviews", label: "Отзывы" },
   { href: "/about", label: "О компании" },
   { href: "/contacts", label: "Контакты" },
 ];
@@ -17,7 +18,7 @@ export function SiteHeader() {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
-        <Link href="/portfolio">Портфолио</Link><Link href="/" className="shrink-0 font-display text-lg font-semibold">
+        <Link href="/" className="shrink-0 font-display text-lg font-semibold">
           CustomPS
         </Link>
 
