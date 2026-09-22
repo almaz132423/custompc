@@ -2,7 +2,31 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export type PCBuild = { id: string; slug: string; name: string; description: string | null; price: string; status?: "AVAILABLE" | "HIDDEN" | "SOLD"; purpose: string; resolution: string | null; warrantyMonths: number | null; buildTimeDays: number | null; avitoUrl: string | null; images: { id: string; url: string; sortOrder: number }[]; category: { id: string; name: string; slug: string } | null };
 export type PCBuildDetail = PCBuild & { components: { id: string; quantity: number; component: { id: string; manufacturer: string; model: string; category: { name: string } | null } }[] };
-export async function getPcBuilds(): Promise<PCBuild[]> { try { const res = await fetch(`${API_URL}/pc-builds`, { cache: "no-store" }); if (!res.ok) return []; return res.json(); } catch { return []; } }
+export type PcBuildCatalogParams = {
+  minPrice?: string;
+  maxPrice?: string;
+  purpose?: string;
+  gpu?: string;
+  cpu?: string;
+  minRam?: string;
+  minStorage?: string;
+  resolution?: string;
+  sort?: "price-asc" | "price-desc" | "newest";
+};
+export async function getPcBuilds(params: PcBuildCatalogParams = {}): Promise<PCBuild[]> {
+  try {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") query.set(key, value);
+    });
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    const res = await fetch(`${API_URL}/pc-builds${suffix}`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
 export async function getPcBuildBySlug(slug: string): Promise<PCBuildDetail | null> { try { const res = await fetch(`${API_URL}/pc-builds/${slug}`, { cache: "no-store" }); if (!res.ok) return null; return res.json(); } catch { return null; } }
 export type RecommendParams = { purpose?: string; budget?: string; resolution?: string; priority?: string };
 export async function getRecommendation(params: RecommendParams): Promise<PCBuild | null> { try { const query = new URLSearchParams(Object.entries(params).filter(([, v]) => Boolean(v)) as [string, string][]); const res = await fetch(`${API_URL}/configurator/recommend?${query.toString()}`, { cache: "no-store" }); if (!res.ok) return null; return res.json(); } catch { return null; } }
