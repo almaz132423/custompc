@@ -1,4 +1,32 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateServiceDto } from './create-service.dto.js';
+import { IsBoolean, IsEnum, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { ServiceType } from '@prisma/client';
 
-export class UpdateServiceDto extends PartialType(CreateServiceDto) {}
+export class UpdateServiceDto {
+  @IsOptional()
+  @IsEnum(ServiceType)
+  type?: ServiceType;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  priceFrom?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  priceTo?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  durationDays?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
