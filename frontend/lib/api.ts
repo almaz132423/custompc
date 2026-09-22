@@ -81,3 +81,62 @@ export type SiteSetting = { id: string; key: string; value: string };
 export async function getSiteSettings(): Promise<SiteSetting[]> { const res = await fetch(`${API_URL}/admin/site-settings`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить настройки сайта")); return res.json(); }
 export async function updateSiteSetting(key: string, value: string): Promise<SiteSetting> { const res = await fetch(`${API_URL}/admin/site-settings/${key}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value }) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить настройку")); return res.json(); }
 export async function getPublicSiteSettings(): Promise<Record<string, string>> { try { const res = await fetch(`${API_URL}/site-settings`, { cache: "no-store" }); if (!res.ok) return {}; return res.json(); } catch { return {}; } }
+
+export type ServiceType = "BUILD" | "UPGRADE" | "REPAIR" | "MAINTENANCE";
+export type Service = {
+  id: string;
+  type: ServiceType;
+  name: string;
+  description: string | null;
+  priceFrom: string | null;
+  priceTo: string | null;
+  durationDays: number | null;
+  isActive: boolean;
+};
+export type ServiceInput = {
+  type: ServiceType;
+  name: string;
+  description?: string;
+  priceFrom?: string;
+  priceTo?: string;
+  durationDays?: string;
+  isActive?: boolean;
+};
+export async function getPublicServices(): Promise<Service[]> {
+  try {
+    const res = await fetch(`${API_URL}/services`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
+}
+export async function getAdminServices(): Promise<Service[]> {
+  const res = await fetch(`${API_URL}/services/admin`, { credentials: "include", cache: "no-store" });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить услуги"));
+  return res.json();
+}
+export async function createService(input: ServiceInput): Promise<Service> {
+  const res = await fetch(`${API_URL}/services/admin`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать услугу"));
+  return res.json();
+}
+export async function updateService(id: string, input: Partial<ServiceInput>): Promise<Service> {
+  const res = await fetch(`${API_URL}/services/admin/${id}`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить услугу"));
+  return res.json();
+}
+export async function deleteService(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/services/admin/${id}`, { method: "DELETE", credentials: "include" });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить услугу"));
+}
