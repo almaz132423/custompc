@@ -1,4 +1,4 @@
-import { IsEnum, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsNumberString, IsOptional, IsString } from 'class-validator';
 import { ServiceType } from '@prisma/client';
 
 export class CreateServiceDto {
@@ -25,5 +25,6 @@ export class CreateServiceDto {
   durationDays?: string;
 
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }
