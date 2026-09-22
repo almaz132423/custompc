@@ -17,7 +17,7 @@ export function SiteHeader() {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
-        <Link href="/" className="shrink-0 font-display text-lg font-semibold">
+        <Link href="/portfolio">Портфолио</Link><Link href="/" className="shrink-0 font-display text-lg font-semibold">
           CustomPS
         </Link>
 

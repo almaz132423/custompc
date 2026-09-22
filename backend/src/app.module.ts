@@ -13,6 +13,7 @@ import { OrdersModule } from './orders/orders.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { SiteSettingsModule } from './site-settings/site-settings.module.js';
 import { ServicesModule } from './services/services.module.js';
+import { PortfolioModule } from './portfolio/portfolio.module.js';
 
-@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule, OrdersModule, NotificationsModule, SiteSettingsModule, ServicesModule], controllers: [AppController], providers: [AppService] })
+@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule, OrdersModule, NotificationsModule, SiteSettingsModule, ServicesModule, PortfolioModule], controllers: [AppController], providers: [AppService] })
 export class AppModule {}
