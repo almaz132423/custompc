@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { Purpose, Resolution } from '@prisma/client';
 
 export type PcBuildCatalogQuery = {
   minPrice?: number;
@@ -14,6 +15,10 @@ export type PcBuildCatalogQuery = {
 };
 
 type JsonRecord = Record<string, unknown>;
+
+function enumValue<T extends string>(value: string | undefined, allowed: readonly T[]): T | undefined {
+  return value && (allowed as readonly string[]).includes(value) ? value as T : undefined;
+}
 
 function asRecord(value: unknown): JsonRecord {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonRecord : {};
@@ -69,8 +74,12 @@ export class PcBuildsService {
             ...(query.maxPrice !== undefined ? { lte: query.maxPrice } : {}),
           },
         } : {}),
-        ...(query.purpose ? { purpose: query.purpose as never } : {}),
-        ...(query.resolution ? { resolution: query.resolution as never } : {}),
+        ...(enumValue(query.purpose, Object.values(Purpose)) ? {
+          purpose: enumValue(query.purpose, Object.values(Purpose)),
+        } : {}),
+        ...(enumValue(query.resolution, Object.values(Resolution)) ? {
+          resolution: enumValue(query.resolution, Object.values(Resolution)),
+        } : {}),
       },
       include: {
         images: true,
