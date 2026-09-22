@@ -140,3 +140,65 @@ export async function deleteService(id: string): Promise<void> {
   const res = await fetch(`${API_URL}/services/admin/${id}`, { method: "DELETE", credentials: "include" });
   if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить услугу"));
 }
+
+
+export type PortfolioImage = { id: string; url: string; sortOrder: number };
+export type PortfolioItem = {
+  id: string;
+  slug: string;
+  title: string;
+  clientTask: string | null;
+  budget: string | null;
+  components: unknown;
+  description: string | null;
+  result: string | null;
+  testing: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  images: PortfolioImage[];
+};
+export type PortfolioInput = {
+  slug: string;
+  title: string;
+  clientTask?: string;
+  budget?: string;
+  components?: string;
+  description?: string;
+  result?: string;
+  testing?: string;
+  isPublished?: boolean;
+  imageUrls?: string[];
+};
+export async function getPublicPortfolio(): Promise<PortfolioItem[]> {
+  try {
+    const res = await fetch(`${API_URL}/portfolio`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
+}
+export async function getPublicPortfolioItem(slug: string): Promise<PortfolioItem | null> {
+  try {
+    const res = await fetch(`${API_URL}/portfolio/${encodeURIComponent(slug)}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+export async function getAdminPortfolio(): Promise<PortfolioItem[]> {
+  const res = await fetch(`${API_URL}/portfolio/admin`, { credentials: "include", cache: "no-store" });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить портфолио"));
+  return res.json();
+}
+export async function createPortfolio(input: PortfolioInput): Promise<PortfolioItem> {
+  const res = await fetch(`${API_URL}/portfolio/admin`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать работу"));
+  return res.json();
+}
+export async function updatePortfolio(id: string, input: Partial<PortfolioInput>): Promise<PortfolioItem> {
+  const res = await fetch(`${API_URL}/portfolio/admin/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить работу"));
+  return res.json();
+}
+export async function deletePortfolio(id: string): Promise<void> {
+  const res = await fetch(`${API_URL}/portfolio/admin/${id}`, { method: "DELETE", credentials: "include" });
+  if (!res.ok) throw new Error(await getApiError(res, "Не удалось удалить работу"));
+}
