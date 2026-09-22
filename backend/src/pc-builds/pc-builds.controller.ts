@@ -1,17 +1,27 @@
-import { Controller, Get, Param } from '@nestjs/common';
-import { PcBuildsService } from './pc-builds.service.js';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { PcBuildsService, PcBuildCatalogQuery } from './pc-builds.service.js';
 
 @Controller('pc-builds')
 export class PcBuildsController {
   constructor(private readonly pcBuildsService: PcBuildsService) {}
 
-  // GET /pc-builds — список готовых сборок
   @Get()
-  findAll() {
-    return this.pcBuildsService.findAll();
+  findAll(@Query() query: PcBuildCatalogQuery) {
+    const parsed: PcBuildCatalogQuery = {
+      minPrice: query.minPrice ? Number(query.minPrice) : undefined,
+      maxPrice: query.maxPrice ? Number(query.maxPrice) : undefined,
+      minRam: query.minRam ? Number(query.minRam) : undefined,
+      minStorage: query.minStorage ? Number(query.minStorage) : undefined,
+      purpose: query.purpose,
+      gpu: query.gpu,
+      cpu: query.cpu,
+      resolution: query.resolution,
+      sort: query.sort,
+    };
+
+    return this.pcBuildsService.findAll(parsed);
   }
 
-  // GET /pc-builds/:slug — карточка одной сборки
   @Get(':slug')
   findOne(@Param('slug') slug: string) {
     return this.pcBuildsService.findBySlug(slug);
