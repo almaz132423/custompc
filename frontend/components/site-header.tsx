@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/configurator", label: "Конфигуратор" },
   { href: "/services", label: "Услуги" },
   { href: "/portfolio", label: "Портфолио" },
+  { href: "/reviews", label: "Отзывы" },
   { href: "/about", label: "О компании" },
   { href: "/contacts", label: "Контакты" },
 ];
