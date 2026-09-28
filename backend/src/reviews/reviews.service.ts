@@ -28,12 +28,12 @@ export class ReviewsService {
   }
 
   create(dto: CreateReviewDto) {
-    return this.prisma.review.create({ data: this.toData(dto) });
+    return this.prisma.review.create({ data: this.toCreateData(dto) });
   }
 
   async update(id: string, dto: UpdateReviewDto) {
     await this.findOne(id);
-    return this.prisma.review.update({ where: { id }, data: this.toData(dto) });
+    return this.prisma.review.update({ where: { id }, data: this.toUpdateData(dto) });
   }
 
   async remove(id: string) {
@@ -42,7 +42,18 @@ export class ReviewsService {
     return { ok: true };
   }
 
-  private toData(dto: CreateReviewDto | UpdateReviewDto): Prisma.ReviewUncheckedCreateInput | Prisma.ReviewUncheckedUpdateInput {
+  private toCreateData(dto: CreateReviewDto): Prisma.ReviewUncheckedCreateInput {
+    return {
+      customerName: dto.customerName.trim(),
+      text: dto.text.trim(),
+      rating: dto.rating,
+      ...(dto.photoUrl !== undefined && { photoUrl: dto.photoUrl.trim() || null }),
+      ...(dto.purchasedBuild !== undefined && { purchasedBuild: dto.purchasedBuild.trim() || null }),
+      ...(dto.isPublished !== undefined && { isPublished: dto.isPublished }),
+    };
+  }
+
+  private toUpdateData(dto: UpdateReviewDto): Prisma.ReviewUncheckedUpdateInput {
     return {
       ...(dto.customerName !== undefined && { customerName: dto.customerName.trim() }),
       ...(dto.text !== undefined && { text: dto.text.trim() }),
