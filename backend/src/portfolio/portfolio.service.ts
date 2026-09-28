@@ -43,7 +43,7 @@ export class PortfolioService {
 
   async create(dto: CreatePortfolioDto) {
     return this.prisma.portfolio.create({
-      data: this.toData(dto),
+      data: this.toCreateData(dto),
       include: { images: { orderBy: { sortOrder: 'asc' } } },
     });
   }
@@ -52,7 +52,7 @@ export class PortfolioService {
     await this.findOne(id);
     return this.prisma.portfolio.update({
       where: { id },
-      data: this.toData(dto),
+      data: this.toUpdateData(dto),
       include: { images: { orderBy: { sortOrder: 'asc' } } },
     });
   }
@@ -63,8 +63,26 @@ export class PortfolioService {
     return { ok: true };
   }
 
-  private toData(dto: CreatePortfolioDto | UpdatePortfolioDto): Prisma.PortfolioCreateInput | Prisma.PortfolioUpdateInput {
-    const imageUrls = dto.imageUrls;
+  private toCreateData(dto: CreatePortfolioDto): Prisma.PortfolioCreateInput {
+    return {
+      slug: dto.slug.trim(),
+      title: dto.title.trim(),
+      ...(dto.clientTask !== undefined && { clientTask: dto.clientTask.trim() || null }),
+      ...(dto.budget !== undefined && { budget: dto.budget ? new Prisma.Decimal(dto.budget) : null }),
+      ...(dto.components !== undefined && { components: this.parseJson(dto.components) }),
+      ...(dto.description !== undefined && { description: dto.description.trim() || null }),
+      ...(dto.result !== undefined && { result: dto.result.trim() || null }),
+      ...(dto.testing !== undefined && { testing: dto.testing.trim() || null }),
+      ...(dto.isPublished !== undefined && { isPublished: dto.isPublished }),
+      ...(dto.imageUrls !== undefined && {
+        images: {
+          create: dto.imageUrls.filter(Boolean).map((url, index) => ({ url: url.trim(), sortOrder: index })),
+        },
+      }),
+    };
+  }
+
+  private toUpdateData(dto: UpdatePortfolioDto): Prisma.PortfolioUpdateInput {
     return {
       ...(dto.slug !== undefined && { slug: dto.slug.trim() }),
       ...(dto.title !== undefined && { title: dto.title.trim() }),
@@ -75,16 +93,16 @@ export class PortfolioService {
       ...(dto.result !== undefined && { result: dto.result.trim() || null }),
       ...(dto.testing !== undefined && { testing: dto.testing.trim() || null }),
       ...(dto.isPublished !== undefined && { isPublished: dto.isPublished }),
-      ...(imageUrls !== undefined && {
+      ...(dto.imageUrls !== undefined && {
         images: {
           deleteMany: {},
-          create: imageUrls.filter(Boolean).map((url, index) => ({ url: url.trim(), sortOrder: index })),
+          create: dto.imageUrls.filter(Boolean).map((url, index) => ({ url: url.trim(), sortOrder: index })),
         },
       }),
     };
   }
 
-  private parseJson(value: string): Prisma.InputJsonValue | Prisma.JsonNull {
+  private parseJson(value: string): Prisma.InputJsonValue | typeof Prisma.JsonNull {
     if (!value.trim()) return Prisma.JsonNull;
     try {
       return JSON.parse(value) as Prisma.InputJsonValue;

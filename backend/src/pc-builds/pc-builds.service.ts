@@ -42,20 +42,19 @@ function componentSpecNumber(specs: unknown, keys: string[]): number | null {
   return null;
 }
 
-function getRamGb(component: { specs: unknown; quantity: number }) {
-  const size = componentSpecNumber(component.specs, ['size', 'capacity', 'memory']);
+function getRamGb(component: { component: { specs: unknown }; quantity: number }) {
+  const size = componentSpecNumber(component.component.specs, ['size', 'capacity', 'memory']);
   if (size === null) return null;
 
-  const modules = componentSpecNumber(component.specs, ['modules']);
-  // pc-part-dataset memory.size is per module; multiply by module count when available.
+  const modules = componentSpecNumber(component.component.specs, ['modules']);
   return size * (modules && modules > 0 ? modules : 1) * component.quantity;
 }
 
-function getStorageGb(component: { specs: unknown; quantity: number }) {
-  const capacity = componentSpecNumber(component.specs, ['capacity', 'size']);
+function getStorageGb(component: { component: { specs: unknown }; quantity: number }) {
+  const specs = asRecord(component.component.specs);
+  const capacity = componentSpecNumber(specs, ['capacity', 'size']);
   if (capacity === null) return null;
-  // Dataset storage capacity is normally in GB. If it is expressed in TB, convert it.
-  const unit = String(asRecord(component.specs).capacity_unit ?? asRecord(component.specs).unit ?? '').toLowerCase();
+  const unit = String(specs.capacity_unit ?? specs.unit ?? '').toLowerCase();
   const gb = unit === 'tb' ? capacity * 1024 : capacity;
   return gb * component.quantity;
 }
