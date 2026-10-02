@@ -133,7 +133,10 @@ export default function ConfiguratorPage() {
 
   function nextCategory() {
     const index = orderedCategories.findIndex((category) => category.code === activeCategory?.code);
-    if (index >= 0 && index < orderedCategories.length - 1) setActiveCode(orderedCategories[index + 1].code);
+    if (index >= 0 && index < orderedCategories.length - 1) {
+      setSearch("");
+      setActiveCode(orderedCategories[index + 1].code);
+    }
   }
 
   if (loading) {
