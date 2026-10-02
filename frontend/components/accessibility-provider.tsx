@@ -43,7 +43,7 @@ export function AccessibilityProvider({ children }: { children: React.ReactNode 
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as Partial<AccessibilitySettings>;
-        const next = {
+        const next: AccessibilitySettings = {
           ...DEFAULTS,
           ...parsed,
           fontSize: parsed.fontSize === "large" || parsed.fontSize === "xlarge" ? parsed.fontSize : "normal",

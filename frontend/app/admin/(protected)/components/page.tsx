@@ -140,7 +140,7 @@ export default function AdminComponentsPage() {
 
   function startEdit(component: Component) {
     setEditingId(component.id);
-    setForm({ categoryId: component.categoryId, manufacturer: component.manufacturer, model: component.model, price: component.price, imageUrl: component.imageUrl ?? "", specs: toJsonText(component.specs), compatibility: toJsonText(component.compatibility), inStock: component.inStock });
+    setForm({ categoryId: component.categoryId, manufacturer: component.manufacturer, model: component.model, price: component.price ?? "", imageUrl: component.imageUrl ?? "", specs: toJsonText(component.specs), compatibility: toJsonText(component.compatibility), inStock: component.inStock });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
