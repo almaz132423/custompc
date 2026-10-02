@@ -26,6 +26,7 @@ export default function ConfiguratorPage() {
   const [categories, setCategories] = useState<ComponentCategory[]>([]);
   const [availableComponents, setAvailableComponents] = useState<Component[]>([]);
   const [excludedComponents, setExcludedComponents] = useState<CompatibleComponentsResponse["excluded"]>([]);
+  const [excludedCount, setExcludedCount] = useState(0);
   const [selection, setSelection] = useState<Selection>({});
   const [activeCode, setActiveCode] = useState("CPU");
   const [search, setSearch] = useState("");
@@ -77,6 +78,7 @@ export default function ConfiguratorPage() {
       const result = await getCompatibleConfiguratorComponents(activeCategory.id, selectedIds, { search, offset, limit: 40 });
       setAvailableComponents((current) => append ? [...current, ...result.components] : result.components);
       setExcludedComponents((current) => append ? [...current, ...result.excluded] : result.excluded);
+      setExcludedCount((current) => append ? current + result.excludedCount : result.excludedCount);
       setHasMore(result.hasMore);
       setNextOffset(result.nextOffset);
     } catch (err) {
@@ -91,6 +93,7 @@ export default function ConfiguratorPage() {
     if (!activeCategory) return;
     setAvailableComponents([]);
     setExcludedComponents([]);
+    setExcludedCount(0);
     setNextOffset(0);
     const timer = window.setTimeout(() => loadComponents(0, false), search.trim() ? 250 : 0);
     return () => window.clearTimeout(timer);
@@ -188,8 +191,9 @@ export default function ConfiguratorPage() {
 
                 {excludedComponents.length > 0 && (
                   <details className="mt-3 rounded-md border border-border bg-surface p-4">
-                    <summary className="cursor-pointer text-sm">Почему часть вариантов скрыта? <span className="font-mono text-xs text-muted">{excludedComponents.length}</span></summary>
+                    <summary className="cursor-pointer text-sm">Почему часть вариантов скрыта? <span className="font-mono text-xs text-muted">{excludedCount}</span></summary>
                     <div className="mt-4 space-y-3">
+                      {excludedCount > excludedComponents.length && <p className="text-xs text-muted">Показаны причины для первых {excludedComponents.length} скрытых вариантов.</p>}
                       {excludedComponents.map((component) => (
                         <div key={component.id} className="border-t border-border pt-3 first:border-0 first:pt-0">
                           <p className="text-sm">{component.manufacturer} {component.model}</p>
