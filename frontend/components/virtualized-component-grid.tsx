@@ -60,7 +60,7 @@ export function VirtualizedComponentGrid({ components, selectedId, onSelect, onE
                 </div>
                 <div className="mt-4 flex items-center justify-between font-mono text-sm">
                   <span className="text-accent">{component.price == null ? "Цена не указана" : new Intl.NumberFormat("ru-RU").format(Number(component.price)) + " ₽"}</span>
-                  <span className="text-xs text-muted">В наличии</span>
+                  <span className="text-xs text-accent">Добавить →</span>
                 </div>
               </button>
             );
