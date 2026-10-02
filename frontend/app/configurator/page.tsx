@@ -103,25 +103,22 @@ export default function ConfiguratorPage() {
     if (!loadingMore && !filtering && hasMore && nextOffset !== null) loadComponents(nextOffset, true);
   }, [filtering, hasMore, loadComponents, loadingMore, nextOffset]);
 
-  async function selectComponent(component: Component) {
+  function selectComponent(component: Component) {
     const nextSelection = { ...selection, [component.category.code]: component };
     setSelection(nextSelection);
     setSearch("");
     setIssues([]);
-    const ids = Object.values(nextSelection).filter(Boolean).map((item) => (item as Component).id);
-    setChecking(true);
-    try {
-      const result = await validateConfigurator(ids);
-      setIssues(result.issues);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось проверить совместимость");
-    } finally {
-      setChecking(false);
-    }
 
     const currentIndex = orderedCategories.findIndex((category) => category.code === component.category.code);
     const next = orderedCategories[currentIndex + 1];
     if (next) setActiveCode(next.code);
+
+    const ids = Object.values(nextSelection).filter(Boolean).map((item) => (item as Component).id);
+    setChecking(true);
+    validateConfigurator(ids)
+      .then((result) => setIssues(result.issues))
+      .catch((err) => setError(err instanceof Error ? err.message : "Не удалось проверить совместимость"))
+      .finally(() => setChecking(false));
   }
 
   function clearSelection(code: string) {
