@@ -103,6 +103,7 @@ export default function ConfiguratorPage() {
   async function selectComponent(component: Component) {
     const nextSelection = { ...selection, [component.category.code]: component };
     setSelection(nextSelection);
+    setSearch("");
     setIssues([]);
     const ids = Object.values(nextSelection).filter(Boolean).map((item) => (item as Component).id);
     setChecking(true);
@@ -114,6 +115,10 @@ export default function ConfiguratorPage() {
     } finally {
       setChecking(false);
     }
+
+    const currentIndex = orderedCategories.findIndex((category) => category.code === component.category.code);
+    const next = orderedCategories[currentIndex + 1];
+    if (next) setActiveCode(next.code);
   }
 
   function clearSelection(code: string) {
@@ -175,8 +180,14 @@ export default function ConfiguratorPage() {
                   </div>
                 </div>
 
+                {selectedIds.length > 0 && (
+                  <div className="mt-4 rounded-md border border-accent/30 bg-accent/5 px-4 py-3 text-xs text-muted">
+                    <span className="font-medium text-accent">Умный подбор включён.</span> После выбранных комплектующих здесь показываются только совместимые варианты. Несовместимые варианты скрыты автоматически.
+                  </div>
+                )}
+
                 {excludedComponents.length > 0 && (
-                  <details className="mt-4 rounded-md border border-border bg-surface p-4">
+                  <details className="mt-3 rounded-md border border-border bg-surface p-4">
                     <summary className="cursor-pointer text-sm">Почему часть вариантов скрыта? <span className="font-mono text-xs text-muted">{excludedComponents.length}</span></summary>
                     <div className="mt-4 space-y-3">
                       {excludedComponents.map((component) => (
