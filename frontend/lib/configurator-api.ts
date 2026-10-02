@@ -11,6 +11,7 @@ export type ConfiguratorValidation = {
 export type CompatibleComponentsResponse = {
   components: Component[];
   excluded: { id: string; manufacturer: string; model: string; reasons: string[] }[];
+  excludedCount: number;
   total: number;
   offset: number;
   limit: number;
