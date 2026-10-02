@@ -65,41 +65,71 @@ export class ConfiguratorService {
       } : {}),
     };
 
-    const [candidates, total] = await Promise.all([
-      this.prisma.component.findMany({
-        where,
-        include: { category: true },
-        orderBy: [{ manufacturer: 'asc' }, { model: 'asc' }, { id: 'asc' }],
-        skip: offset,
-        take: limit,
-      }),
-      this.prisma.component.count({ where }),
-    ]);
-
+    const total = await this.prisma.component.count({ where });
     const uniqueSelectedIds = [...new Set(selectedIds)];
     const selected = uniqueSelectedIds.length
       ? await this.prisma.component.findMany({ where: { id: { in: uniqueSelectedIds }, inStock: true }, include: { category: true } })
       : [];
     const activeRules = await this.compatibility.getActiveRules();
 
+    const compatible: typeof selected = [];
     const excluded: { id: string; manufacturer: string; model: string; reasons: string[] }[] = [];
-    const compatible: typeof candidates = [];
+    let scannedOffset = offset;
+    let exhausted = false;
+    let excludedCount = 0;
 
-    for (const candidate of candidates) {
-      const selectedWithoutSameCategory = selected.filter((item) => item.categoryId !== candidate.categoryId);
-      const issues = await this.compatibility.validateComponents([...selectedWithoutSameCategory, candidate], activeRules);
-      if (issues.length === 0) compatible.push(candidate);
-      else excluded.push({ id: candidate.id, manufacturer: candidate.manufacturer, model: candidate.model, reasons: [...new Set(issues.map((issue) => issue.message))] });
+    while (compatible.length < limit && !exhausted) {
+      const candidates = await this.prisma.component.findMany({
+        where,
+        include: { category: true },
+        orderBy: [{ manufacturer: 'asc' }, { model: 'asc' }, { id: 'asc' }],
+        skip: scannedOffset,
+        take: Math.max(limit * 2, 40),
+      });
+
+      if (candidates.length === 0) {
+        exhausted = true;
+        break;
+      }
+
+      for (const candidate of candidates) {
+        const selectedWithoutSameCategory = selected.filter((item) => item.categoryId !== candidate.categoryId);
+        const issues = await this.compatibility.validateComponents([...selectedWithoutSameCategory, candidate], activeRules);
+        if (issues.length === 0) {
+          compatible.push(candidate);
+          if (compatible.length >= limit) {
+            scannedOffset += candidates.indexOf(candidate) + 1;
+            break;
+          }
+        } else {
+          excludedCount += 1;
+          if (excluded.length < 50) {
+            excluded.push({
+              id: candidate.id,
+              manufacturer: candidate.manufacturer,
+              model: candidate.model,
+              reasons: [...new Set(issues.map((issue) => issue.message))],
+            });
+          }
+        }
+        scannedOffset += 1;
+      }
+
+      if (candidates.length < Math.max(limit * 2, 40) || scannedOffset >= offset + total) {
+        exhausted = true;
+      }
     }
 
+    const hasMore = !exhausted;
     return {
       components: compatible,
       excluded,
+      excludedCount,
       total,
       offset,
       limit,
-      hasMore: offset + candidates.length < total,
-      nextOffset: offset + candidates.length < total ? offset + candidates.length : null,
+      hasMore,
+      nextOffset: hasMore ? scannedOffset : null,
     };
   }
 
