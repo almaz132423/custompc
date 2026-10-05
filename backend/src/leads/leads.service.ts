@@ -224,7 +224,7 @@ export class LeadsService {
   findOne(id: string) {
     return this.prisma.lead.findUnique({
       where: { id },
-      include: { pcBuild: { select: { id: true, name: true, slug: true, price: true } }, order: { select: { id: true, number: true } }, statusHistory: { orderBy: { createdAt: 'desc' } } },
+      include: { customer: true, pcBuild: { select: { id: true, name: true, slug: true, price: true } }, order: { select: { id: true, number: true } }, statusHistory: { orderBy: { createdAt: 'desc' } } },
     });
   }
 
