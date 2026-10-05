@@ -46,7 +46,7 @@ export default function AdminLeadsPage() {
       setStatus(selected.status);
       setComment("");
       setCustomerName(selected.customer?.name ?? selected.name);
-      setCustomerContact(selected.customer?.email ?? selected.customer?.phone ?? selected.contact);
+      setCustomerContact(selected.contact);
       setAgreedPrice(selected.agreedPrice ?? selected.budget ?? "");
     }
   }, [selected?.id, selected?.status]);
