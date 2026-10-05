@@ -5,6 +5,7 @@ import {
   createService,
   deleteService,
   getAdminServices,
+  getAdminServiceTypes,
   updateService,
   type Service,
   type ServiceInput,
@@ -21,16 +22,18 @@ const emptyForm: ServiceInput = {
   isActive: true,
 };
 
-const typeLabels: Record<ServiceType, string> = {
-  BUILD: "Сборка",
-  UPGRADE: "Апгрейд",
-  REPAIR: "Ремонт",
-  MAINTENANCE: "Обслуживание",
-};
+const builtInTypes = [
+  { value: "BUILD", label: "Сборка" },
+  { value: "UPGRADE", label: "Апгрейд" },
+  { value: "REPAIR", label: "Ремонт" },
+  { value: "MAINTENANCE", label: "Обслуживание" },
+];
 
 export default function AdminServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<string[]>(builtInTypes.map((item) => item.value));
   const [form, setForm] = useState<ServiceInput>(emptyForm);
+  const [customType, setCustomType] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,7 +43,9 @@ export default function AdminServicesPage() {
     setLoading(true);
     setError("");
     try {
-      setServices(await getAdminServices());
+      const [loadedServices, loadedTypes] = await Promise.all([getAdminServices(), getAdminServiceTypes()]);
+      setServices(loadedServices);
+      setServiceTypes(Array.from(new Set([...builtInTypes.map((item) => item.value), ...loadedTypes])));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Не удалось загрузить услуги");
     } finally {
@@ -52,6 +57,7 @@ export default function AdminServicesPage() {
 
   function startEdit(service: Service) {
     setEditingId(service.id);
+    setCustomType(service.type);
     setForm({
       type: service.type,
       name: service.name,
@@ -66,6 +72,7 @@ export default function AdminServicesPage() {
 
   function resetForm() {
     setEditingId(null);
+    setCustomType("");
     setForm({ ...emptyForm });
   }
 
@@ -75,8 +82,11 @@ export default function AdminServicesPage() {
     setError("");
     try {
       if (!form.name.trim()) throw new Error("Укажите название услуги");
+      const selectedType = form.type === "__CUSTOM__" ? customType.trim() : form.type.trim();
+      if (!selectedType) throw new Error("Укажите тип услуги");
       const input = {
         ...form,
+        type: selectedType,
         name: form.name.trim(),
         description: form.description?.trim() || "",
         priceFrom: form.priceFrom?.trim() || undefined,
@@ -123,9 +133,14 @@ export default function AdminServicesPage() {
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <Field label="Тип">
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ServiceType })} className="admin-input">
-              {Object.entries(typeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            <select value={serviceTypes.includes(form.type) ? form.type : "__CUSTOM__"} onChange={(e) => setForm({ ...form, type: e.target.value as ServiceType })} className="admin-input">
+              {builtInTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              {serviceTypes.filter((type) => !builtInTypes.some((item) => item.value === type)).map((type) => <option key={type} value={type}>{type}</option>)}
+              <option value="__CUSTOM__">+ Добавить новый тип</option>
             </select>
+            {(form.type === "__CUSTOM__" || !serviceTypes.includes(form.type)) && (
+              <input value={customType} onChange={(e) => setCustomType(e.target.value)} placeholder="Например: Диагностика" className="admin-input mt-2" />
+            )}
           </Field>
           <Field label="Название">
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="admin-input" />
@@ -166,7 +181,7 @@ export default function AdminServicesPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-medium">{service.name}</h3>
-                    <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">{typeLabels[service.type]}</span>
+                    <span className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">{builtInTypes.find((item) => item.value === service.type)?.label ?? service.type}</span>
                     {!service.isActive && <span className="rounded-full border border-red-500/40 px-2 py-0.5 text-[11px] text-red-400">Скрыта</span>}
                   </div>
                   {service.description && <p className="mt-1 max-w-2xl text-sm text-muted">{service.description}</p>}
