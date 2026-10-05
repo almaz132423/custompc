@@ -5,7 +5,7 @@ import { SiteSettingsService } from './site-settings.service.js';
 
 @Module({
   imports: [AuthModule],
-  controllers: [SiteSettingsController],
+  controllers: [SiteSettingsController, AdminSiteSettingsController],
   providers: [SiteSettingsService],
   exports: [SiteSettingsService],
 })
