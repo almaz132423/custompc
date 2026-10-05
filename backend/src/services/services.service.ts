@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CreateServiceDto } from './dto/create-service.dto.js';
@@ -40,11 +40,16 @@ export class ServicesService {
   }
 
   create(dto: CreateServiceDto) {
+    this.validatePriceRange(dto.priceFrom, dto.priceTo);
     return this.prisma.service.create({ data: this.toCreateData(dto) });
   }
 
   async update(id: string, dto: UpdateServiceDto) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
+    this.validatePriceRange(
+      dto.priceFrom ?? current.priceFrom?.toString(),
+      dto.priceTo ?? current.priceTo?.toString(),
+    );
     return this.prisma.service.update({ where: { id }, data: this.toUpdateData(dto) });
   }
 
@@ -52,6 +57,13 @@ export class ServicesService {
     await this.findOne(id);
     await this.prisma.service.delete({ where: { id } });
     return { ok: true };
+  }
+
+  private validatePriceRange(priceFrom?: string, priceTo?: string) {
+    if (priceFrom === undefined || priceFrom === '' || priceTo === undefined || priceTo === '') return;
+    if (new Prisma.Decimal(priceFrom).greaterThan(new Prisma.Decimal(priceTo))) {
+      throw new BadRequestException('Цена «от» не может быть больше цены «до»');
+    }
   }
 
   private toCreateData(dto: CreateServiceDto): Prisma.ServiceUncheckedCreateInput {
