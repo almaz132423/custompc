@@ -27,7 +27,11 @@ export class OrdersService {
     if (lead.order) throw new BadRequestException('Для этой заявки заказ уже создан');
 
     const configuration = this.readConfiguration(lead.configuration);
-    const totalPrice = lead.pcBuild ? Number(lead.pcBuild.price) : Number(configuration?.total ?? 0);
+    const totalPrice = lead.agreedPrice != null
+      ? Number(lead.agreedPrice)
+      : lead.pcBuild
+        ? Number(lead.pcBuild.price)
+        : Number(configuration?.total ?? 0);
     if (!Number.isFinite(totalPrice) || totalPrice <= 0) {
       throw new BadRequestException('Не удалось определить стоимость заказа');
     }
@@ -73,7 +77,13 @@ export class OrdersService {
     const order = await this.prisma.$transaction(async (tx) => {
       const customer = lead.customerId
         ? await tx.customer.findUnique({ where: { id: lead.customerId } })
-        : await tx.customer.create({ data: { name: lead.name, phone: lead.contact } });
+        : await tx.customer.create({
+            data: {
+              name: lead.name,
+              phone: lead.contact.includes('@') ? undefined : lead.contact,
+              email: lead.contact.includes('@') ? lead.contact : undefined,
+            },
+          });
 
       if (!customer) throw new BadRequestException('Клиент заявки не найден');
 
