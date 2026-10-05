@@ -83,14 +83,19 @@ export default function AdminServicesPage() {
     try {
       if (!form.name.trim()) throw new Error("Укажите название услуги");
       const selectedType = form.type === "__CUSTOM__" ? customType.trim() : form.type.trim();
+      const priceFrom = form.priceFrom?.trim() || "";
+      const priceTo = form.priceTo?.trim() || "";
+      if (priceFrom && priceTo && Number(priceFrom) > Number(priceTo)) {
+        throw new Error("Цена «от» не может быть больше цены «до»");
+      }
       if (!selectedType) throw new Error("Укажите тип услуги");
       const input = {
         ...form,
         type: selectedType,
         name: form.name.trim(),
         description: form.description?.trim() || "",
-        priceFrom: form.priceFrom?.trim() || undefined,
-        priceTo: form.priceTo?.trim() || undefined,
+        priceFrom: priceFrom || undefined,
+        priceTo: priceTo || undefined,
         durationDays: form.durationDays?.trim() || undefined,
       };
       if (editingId) await updateService(editingId, input);
