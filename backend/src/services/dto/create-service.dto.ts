@@ -1,12 +1,11 @@
-import { IsBoolean, IsEnum, IsNumberString, IsOptional, IsString } from 'class-validator';
-import { ServiceType } from '@prisma/client';
+import { IsBoolean, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class CreateServiceDto {
-  @IsEnum(ServiceType)
-  type!: ServiceType;
-
   @IsString()
   name!: string;
+
+  @IsString()
+  type!: string;
 
   @IsOptional()
   @IsString()
