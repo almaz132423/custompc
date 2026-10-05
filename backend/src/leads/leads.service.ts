@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { CompatibilityService } from '../pc-build-components/compatibility.service.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
 import { UpdateLeadStatusDto } from './dto/update-lead-status.dto.js';
+import { UpdateLeadDto } from './dto/update-lead.dto.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
 @Injectable()
@@ -44,17 +45,42 @@ export class LeadsService {
       };
     }
 
-    const lead = await this.prisma.lead.create({
-      data: {
-        name: dto.name,
-        contact: dto.contact,
-        budget: dto.budget || undefined,
-        purpose: dto.purpose,
-        comment: dto.comment,
-        category: dto.category,
-        pcBuildId,
-        configuration: configuration as Prisma.InputJsonValue | undefined,
-      },
+    const lead = await this.prisma.$transaction(async (tx) => {
+      const normalizedContact = dto.contact.trim();
+      const isEmail = normalizedContact.includes('@');
+      const customer = await tx.customer.findFirst({
+        where: isEmail ? { email: normalizedContact } : { phone: normalizedContact },
+      });
+
+      const savedCustomer = customer
+        ? await tx.customer.update({
+            where: { id: customer.id },
+            data: {
+              name: dto.name.trim(),
+              ...(isEmail ? { email: normalizedContact } : { phone: normalizedContact }),
+            },
+          })
+        : await tx.customer.create({
+            data: {
+              name: dto.name.trim(),
+              phone: isEmail ? undefined : normalizedContact,
+              email: isEmail ? normalizedContact : undefined,
+            },
+          });
+
+      return tx.lead.create({
+        data: {
+          customerId: savedCustomer.id,
+          name: dto.name.trim(),
+          contact: normalizedContact,
+          budget: dto.budget || undefined,
+          purpose: dto.purpose,
+          comment: dto.comment,
+          category: dto.category,
+          pcBuildId,
+          configuration: configuration as Prisma.InputJsonValue | undefined,
+        },
+      });
     });
 
     void this.notificationsService.notifyNewLead({
@@ -73,6 +99,74 @@ export class LeadsService {
   }
 
   // Пригодится для раздела 37 ТЗ (управление заявками в админке)
+  async update(id: string, dto: UpdateLeadDto) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id },
+      include: { customer: true },
+    });
+    if (!lead) throw new NotFoundException('Заявка не найдена');
+
+    if (dto.agreedPrice === undefined && dto.name === undefined && dto.contact === undefined) {
+      throw new BadRequestException('Нет изменений для сохранения');
+    }
+
+    const normalizedContact = dto.contact?.trim();
+    const isEmail = normalizedContact ? normalizedContact.includes('@') : lead.contact.includes('@');
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      let customerId = lead.customerId;
+      if (normalizedContact || dto.name) {
+        const customer = customerId
+          ? await tx.customer.findUnique({ where: { id: customerId } })
+          : null;
+
+        if (customer) {
+          await tx.customer.update({
+            where: { id: customer.id },
+            data: {
+              ...(dto.name !== undefined && { name: dto.name.trim() }),
+              ...(normalizedContact && (isEmail ? { email: normalizedContact } : { phone: normalizedContact })),
+            },
+          });
+        } else {
+          const existing = normalizedContact
+            ? await tx.customer.findFirst({
+                where: isEmail ? { email: normalizedContact } : { phone: normalizedContact },
+              })
+            : null;
+          const saved = existing ?? await tx.customer.create({
+            data: {
+              name: dto.name?.trim() ?? lead.name,
+              phone: isEmail ? undefined : normalizedContact,
+              email: isEmail ? normalizedContact : undefined,
+            },
+          });
+          customerId = saved.id;
+        }
+      }
+
+      return tx.lead.update({
+        where: { id },
+        data: {
+          ...(dto.name !== undefined && { name: dto.name.trim() }),
+          ...(normalizedContact && { contact: normalizedContact }),
+          ...(dto.agreedPrice !== undefined && {
+            agreedPrice: new Prisma.Decimal(dto.agreedPrice),
+          }),
+          ...(customerId && { customerId }),
+        },
+        include: {
+          customer: true,
+          pcBuild: { select: { id: true, name: true, slug: true, price: true } },
+          order: { select: { id: true, number: true } },
+          statusHistory: { orderBy: { createdAt: 'desc' } },
+        },
+      });
+    });
+
+    return updated;
+  }
+
   async updateStatus(id: string, dto: UpdateLeadStatusDto) {
     const lead = await this.prisma.lead.findUnique({ where: { id }, select: { id: true, status: true } });
     if (!lead) throw new NotFoundException('Заявка не найдена');
@@ -130,7 +224,7 @@ export class LeadsService {
   findOne(id: string) {
     return this.prisma.lead.findUnique({
       where: { id },
-      include: { pcBuild: { select: { id: true, name: true, slug: true, price: true } }, order: { select: { id: true, number: true } }, statusHistory: { orderBy: { createdAt: 'desc' } } },
+      include: { customer: true, pcBuild: { select: { id: true, name: true, slug: true, price: true } }, order: { select: { id: true, number: true } }, statusHistory: { orderBy: { createdAt: 'desc' } } },
     });
   }
 
@@ -138,6 +232,7 @@ export class LeadsService {
     return this.prisma.lead.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        customer: true,
         order: { select: { id: true, number: true } },
         pcBuild: {
           select: { id: true, name: true, slug: true, price: true },

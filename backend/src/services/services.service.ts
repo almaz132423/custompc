@@ -44,7 +44,7 @@ export class ServicesService {
 
   private toCreateData(dto: CreateServiceDto): Prisma.ServiceUncheckedCreateInput {
     return {
-      type: dto.type,
+      type: dto.type.trim(),
       name: dto.name.trim(),
       ...(dto.description !== undefined && { description: dto.description.trim() || null }),
       ...(dto.priceFrom !== undefined && { priceFrom: dto.priceFrom }),
@@ -56,7 +56,7 @@ export class ServicesService {
 
   private toUpdateData(dto: UpdateServiceDto): Prisma.ServiceUncheckedUpdateInput {
     return {
-      ...(dto.type !== undefined && { type: dto.type }),
+      ...(dto.type !== undefined && { type: dto.type.trim() }),
       ...(dto.name !== undefined && { name: dto.name.trim() }),
       ...(dto.description !== undefined && { description: dto.description.trim() || null }),
       ...(dto.priceFrom !== undefined && { priceFrom: dto.priceFrom }),

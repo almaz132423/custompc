@@ -95,13 +95,6 @@ enum PaymentStatus {
   PAID
 }
 
-enum ServiceType {
-  BUILD
-  UPGRADE
-  REPAIR
-  MAINTENANCE
-}
-
 // ---------- ПОЛЬЗОВАТЕЛИ ----------
 
 // Сотрудники (админка). Раздел 4.5 ТЗ — роли ADMIN / MANAGER.
@@ -120,7 +113,8 @@ model User {
 model Customer {
   id        String   @id @default(cuid())
   name      String
-  phone     String
+  phone     String?
+  email     String?
   telegram  String?
   createdAt DateTime @default(now())
 
@@ -253,7 +247,7 @@ model ConfiguratorRule {
 // Раздел 27 ТЗ: сборка, апгрейд, ремонт, обслуживание и т.д.
 model Service {
   id           String      @id @default(cuid())
-  type         ServiceType
+  type         String
   name         String
   description  String?
   priceFrom    Decimal?
@@ -272,6 +266,7 @@ model Lead {
   name          String
   contact       String     // телефон или Telegram, обязательное поле формы
   budget        Decimal?
+  agreedPrice   Decimal?
   purpose       Purpose?
   // Откуда пришла заявка: "Конфигуратор", "Покупка ПК", название услуги
   // (например "Ремонт", "Апгрейд") или "Общий вопрос". Свободный текст,

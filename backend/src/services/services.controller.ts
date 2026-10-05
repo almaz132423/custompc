@@ -19,6 +19,12 @@ export class ServicesController {
     return this.servicesService.findAll();
   }
 
+  @Get('admin/types')
+  @UseGuards(JwtAuthGuard)
+  findTypes() {
+    return this.servicesService.findTypes();
+  }
+
   @Get('admin/:id')
   @UseGuards(JwtAuthGuard)
   findOne(@Param('id') id: string) {

@@ -83,12 +83,13 @@ export async function deleteCompatibilityRule(id: string): Promise<void> { const
 async function getApiError(res: Response, fallback: string): Promise<string> { const data = await res.json().catch(() => null); const message = data?.message; return Array.isArray(message) ? message.join(", ") : message ?? fallback; }
 export type LeadStatus = "NEW" | "IN_PROGRESS" | "CONTACTED" | "CALCULATED" | "AGREED" | "ORDER" | "REJECTED";
 export type LeadStatusHistory = { id: string; fromStatus: LeadStatus | null; toStatus: LeadStatus; comment: string | null; createdAt: string };
-export type AdminLead = { id: string; name: string; contact: string; budget: string | null; purpose: string | null; category: string | null; configuration: Record<string, unknown> | null; pcBuildId: string | null; pcBuild: { id: string; name: string; slug: string; price: string } | null; comment: string | null; status: LeadStatus; createdAt: string; updatedAt: string; statusHistory?: LeadStatusHistory[]; order?: { id: string; number: string } | null };
+export type AdminLead = { id: string; name: string; contact: string; agreedPrice: string | null; customer: { id: string; name: string; phone: string | null; email: string | null; telegram: string | null } | null; budget: string | null; purpose: string | null; category: string | null; configuration: Record<string, unknown> | null; pcBuildId: string | null; pcBuild: { id: string; name: string; slug: string; price: string } | null; comment: string | null; status: LeadStatus; createdAt: string; updatedAt: string; statusHistory?: LeadStatusHistory[]; order?: { id: string; number: string } | null };
 export async function getLeads(): Promise<AdminLead[]> { const res = await fetch(`${API_URL}/leads`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить заявки")); return res.json(); }
 export async function getLead(id: string): Promise<AdminLead> { const res = await fetch(`${API_URL}/leads/${id}`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить заявку")); return res.json(); }
+export async function updateLead(id: string, input: { name?: string; contact?: string; agreedPrice?: string }): Promise<AdminLead> { const res = await fetch(`${API_URL}/leads/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить заявку")); return res.json(); }
 export async function updateLeadStatus(id: string, status: LeadStatus, comment?: string): Promise<AdminLead> { const res = await fetch(`${API_URL}/leads/${id}/status`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, comment }) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось изменить статус заявки")); return res.json(); }
 
-export type AdminOrder = { id: string; number: string; totalPrice: string; costPrice: string | null; profit: string | null; comment: string | null; paymentStatus: string; status: string; createdAt: string; updatedAt: string; customer: { id: string; name: string; phone: string; telegram: string | null }; lead: AdminLead | null; items: { id: string; name: string; price: string; costPrice: string | null; quantity: number; pcBuildId: string | null }[]; payments?: { id: string; amount: string; paidAt: string; method: string | null }[]; statusHistory?: OrderStatusHistory[] } ;
+export type AdminOrder = { id: string; number: string; totalPrice: string; costPrice: string | null; profit: string | null; comment: string | null; paymentStatus: string; status: string; createdAt: string; updatedAt: string; customer: { id: string; name: string; phone: string | null; email: string | null; telegram: string | null }; lead: AdminLead | null; items: { id: string; name: string; price: string; costPrice: string | null; quantity: number; pcBuildId: string | null }[]; payments?: { id: string; amount: string; paidAt: string; method: string | null }[]; statusHistory?: OrderStatusHistory[] } ;
 export async function createOrderFromLead(leadId: string): Promise<AdminOrder> { const res = await fetch(`${API_URL}/orders/from-lead/${leadId}`, { method: "POST", credentials: "include" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось создать заказ")); return res.json(); }
 export async function getOrders(): Promise<AdminOrder[]> { const res = await fetch(`${API_URL}/orders`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить заказы")); return res.json(); }
 
@@ -106,7 +107,7 @@ export async function getSiteSettings(): Promise<SiteSetting[]> { const res = aw
 export async function updateSiteSetting(key: string, value: string): Promise<SiteSetting> { const res = await fetch(`${API_URL}/admin/site-settings/${key}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value }) }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось сохранить настройку")); return res.json(); }
 export async function getPublicSiteSettings(): Promise<Record<string, string>> { try { const res = await fetch(`${API_URL}/site-settings`, { cache: "no-store" }); if (!res.ok) return {}; return res.json(); } catch { return {}; } }
 
-export type ServiceType = "BUILD" | "UPGRADE" | "REPAIR" | "MAINTENANCE";
+export type ServiceType = string;
 export type Service = {
   id: string;
   type: ServiceType;
@@ -135,6 +136,7 @@ export async function getPublicServices(): Promise<Service[]> {
     return [];
   }
 }
+export async function getAdminServiceTypes(): Promise<string[]> { const res = await fetch(`${API_URL}/services/admin/types`, { credentials: "include", cache: "no-store" }); if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить типы услуг")); return res.json(); }
 export async function getAdminServices(): Promise<Service[]> {
   const res = await fetch(`${API_URL}/services/admin`, { credentials: "include", cache: "no-store" });
   if (!res.ok) throw new Error(await getApiError(res, "Не удалось загрузить услуги"));

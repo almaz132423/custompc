@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/co
 import { LeadsService } from './leads.service.js';
 import { CreateLeadDto } from './dto/create-lead.dto.js';
 import { UpdateLeadStatusDto } from './dto/update-lead-status.dto.js';
+import { UpdateLeadDto } from './dto/update-lead.dto.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 @Controller('leads')
@@ -12,6 +13,12 @@ export class LeadsController {
   @Post()
   create(@Body() dto: CreateLeadDto) {
     return this.leadsService.create(dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateLeadDto) {
+    return this.leadsService.update(id, dto);
   }
 
   @UseGuards(JwtAuthGuard)

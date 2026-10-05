@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AdminLead, LeadStatus, createOrderFromLead, getLeads, updateLeadStatus } from "@/lib/api";
+import { AdminLead, LeadStatus, createOrderFromLead, getLeads, updateLead, updateLeadStatus } from "@/lib/api";
 
 const statuses: { value: LeadStatus; label: string }[] = [
   { value: "NEW", label: "Новая" },
@@ -22,6 +22,9 @@ export default function AdminLeadsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [creatingOrder, setCreatingOrder] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerContact, setCustomerContact] = useState("");
+  const [agreedPrice, setAgreedPrice] = useState("");
 
   async function load() {
     setLoading(true);
@@ -42,6 +45,9 @@ export default function AdminLeadsPage() {
     if (selected) {
       setStatus(selected.status);
       setComment("");
+      setCustomerName(selected.customer?.name ?? selected.name);
+      setCustomerContact(selected.contact);
+      setAgreedPrice(selected.agreedPrice ?? selected.budget ?? "");
     }
   }, [selected?.id, selected?.status]);
 
@@ -69,6 +75,25 @@ export default function AdminLeadsPage() {
       setError(err instanceof Error ? err.message : "Не удалось создать заказ");
     } finally {
       setCreatingOrder(false);
+    }
+  }
+
+  async function saveDetails() {
+    if (!selected) return;
+    setSaving(true);
+    setError("");
+    try {
+      const updated = await updateLead(selected.id, {
+        name: customerName.trim(),
+        contact: customerContact.trim(),
+        agreedPrice: agreedPrice.trim() || undefined,
+      });
+      setLeads((items) => items.map((item) => item.id === updated.id ? updated : item));
+      setSelected(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось сохранить данные заявки");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -109,10 +134,10 @@ export default function AdminLeadsPage() {
           ) : (
             <div className="divide-y divide-border">
               {leads.map((lead) => (
-                <button key={lead.id} onClick={() => setSelected(lead)} className={`block w-full p-4 text-left hover:bg-black/5 ${selected?.id === lead.id ? "bg-black/5" : ""}`}>
+                <button key={lead.id} onClick={() => setSelected(lead)} className={`block w-full border-l-4 p-4 text-left hover:bg-black/5 ${selected?.id === lead.id ? "bg-black/5 border-accent" : lead.status === "NEW" ? "border-amber-400 bg-amber-400/5" : "border-transparent"}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="font-medium">{lead.name}</div>
+                      <div className="flex items-center gap-2 font-medium"><span>{lead.name}</span>{lead.status === "NEW" && <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Новая</span>}</div>
                       <div className="mt-1 text-sm text-muted">{lead.contact}</div>
                     </div>
                     <span className="rounded-full border border-border px-2 py-1 text-xs">{statuses.find((item) => item.value === lead.status)?.label ?? lead.status}</span>
@@ -120,7 +145,7 @@ export default function AdminLeadsPage() {
                   <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                     <span>{new Date(lead.createdAt).toLocaleString("ru-RU")}</span>
                     {lead.category && <span>{lead.category}</span>}
-                    {lead.budget && <span>Бюджет: {lead.budget}</span>}
+                    {lead.budget && <span>Бюджет: {lead.budget} ₽</span>}{lead.agreedPrice && <span className="font-medium text-text">Согласовано: {lead.agreedPrice} ₽</span>}
                     {lead.pcBuild && <span>ПК: {lead.pcBuild.name}</span>}
                   </div>
                 </button>
@@ -133,6 +158,27 @@ export default function AdminLeadsPage() {
           <aside className="rounded-lg border border-border p-5">
             <h2 className="text-lg font-semibold">{selected.name}</h2>
             <div className="mt-1 text-sm text-muted">{selected.contact}</div>
+
+            <div className="mt-5 rounded-md border border-border bg-black/5 p-4">
+              <h3 className="font-medium">Клиент и договорённость</h3>
+              <div className="mt-3 space-y-3">
+                <label className="block">
+                  <span className="text-sm font-medium">Имя клиента</span>
+                  <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} className="admin-input mt-2" />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium">Телефон или email</span>
+                  <input value={customerContact} onChange={(e) => setCustomerContact(e.target.value)} className="admin-input mt-2" />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium">Цена по договорённости, ₽</span>
+                  <input value={agreedPrice} onChange={(e) => setAgreedPrice(e.target.value)} type="number" min="0" step="0.01" placeholder="Например, 125000" className="admin-input mt-2" />
+                </label>
+                <button onClick={saveDetails} disabled={saving} className="admin-button w-full">
+                  {saving ? "Сохраняем…" : "Сохранить данные клиента и цену"}
+                </button>
+              </div>
+            </div>
 
             <div className="mt-5 space-y-4">
               <label className="block">
