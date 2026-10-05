@@ -27,6 +27,18 @@ export class ServicesService {
     return service;
   }
 
+  async findTypes(): Promise<string[]> {
+    const services = await this.prisma.service.findMany({
+      select: { type: true },
+      distinct: ['type'],
+      orderBy: { type: 'asc' },
+    });
+
+    return services
+      .map((service) => service.type?.trim())
+      .filter((type): type is string => Boolean(type));
+  }
+
   create(dto: CreateServiceDto) {
     return this.prisma.service.create({ data: this.toCreateData(dto) });
   }
