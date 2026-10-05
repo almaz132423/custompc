@@ -15,6 +15,27 @@ import { SiteSettingsModule } from './site-settings/site-settings.module.js';
 import { ServicesModule } from './services/services.module.js';
 import { PortfolioModule } from './portfolio/portfolio.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 
-@Module({ imports: [PrismaModule, AuthModule, PcBuildsModule, LeadsModule, ConfiguratorModule, ComponentsModule, PcBuildComponentsModule, CompatibilityRulesModule, OrdersModule, NotificationsModule, SiteSettingsModule, ServicesModule, PortfolioModule, ReviewsModule], controllers: [AppController], providers: [AppService] })
+@Module({
+  imports: [
+    PrismaModule,
+    AuthModule,
+    PcBuildsModule,
+    LeadsModule,
+    ConfiguratorModule,
+    ComponentsModule,
+    PcBuildComponentsModule,
+    CompatibilityRulesModule,
+    OrdersModule,
+    NotificationsModule,
+    SiteSettingsModule,
+    ServicesModule,
+    PortfolioModule,
+    ReviewsModule,
+    DashboardModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
 export class AppModule {}
