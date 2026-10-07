@@ -183,6 +183,7 @@ CREATE TABLE "Lead" (
     "contact" TEXT NOT NULL,
     "budget" DECIMAL(65,30),
     "agreedPrice" DECIMAL,
+    "category" TEXT,
     "purpose" "Purpose",
     "configuration" JSONB,
     "pcBuildId" TEXT,
