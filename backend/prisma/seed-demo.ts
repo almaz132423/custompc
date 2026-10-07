@@ -284,7 +284,7 @@ async function main() {
     'DEMO-2026-0003': [
       { status: OrderStatusStage.NEW, comment: 'Заказ создан.' },
       { status: OrderStatusStage.AWAITING_PAYMENT, comment: 'Ожидалась предоплата.' },
-      { status: OrderStatusStage.PARTIALLY_PAID as OrderStatusStage, comment: 'Получена предоплата.' },
+      { status: OrderStatusStage.AWAITING_PAYMENT, comment: 'Получена предоплата, ожидается остаток.' },
       { status: OrderStatusStage.PURCHASING, comment: 'Закупка комплектующих.' },
     ],
     'DEMO-2026-0004': [
