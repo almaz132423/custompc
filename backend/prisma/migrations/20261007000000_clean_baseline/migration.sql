@@ -25,9 +25,6 @@ CREATE TYPE "OrderStatusStage" AS ENUM ('NEW', 'AWAITING_PAYMENT', 'PAID', 'PURC
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('UNPAID', 'PARTIALLY_PAID', 'PAID');
 
--- CreateEnum
-CREATE TYPE "ServiceType" AS ENUM ('BUILD', 'UPGRADE', 'REPAIR', 'MAINTENANCE');
-
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -45,7 +42,8 @@ CREATE TABLE "User" (
 CREATE TABLE "Customer" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "phone" TEXT NOT NULL,
+    "phone" TEXT,
+    "email" TEXT,
     "telegram" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -76,7 +74,8 @@ CREATE TABLE "Component" (
     "categoryId" TEXT NOT NULL,
     "manufacturer" TEXT NOT NULL,
     "model" TEXT NOT NULL,
-    "price" DECIMAL(65,30) NOT NULL,
+    "price" DECIMAL(65,30),
+    "costPrice" DECIMAL,
     "specs" JSONB,
     "imageUrl" TEXT,
     "inStock" BOOLEAN NOT NULL DEFAULT true,
@@ -165,7 +164,7 @@ CREATE TABLE "ConfiguratorRule" (
 -- CreateTable
 CREATE TABLE "Service" (
     "id" TEXT NOT NULL,
-    "type" "ServiceType" NOT NULL,
+    "type" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "priceFrom" DECIMAL(65,30),
@@ -183,6 +182,7 @@ CREATE TABLE "Lead" (
     "name" TEXT NOT NULL,
     "contact" TEXT NOT NULL,
     "budget" DECIMAL(65,30),
+    "agreedPrice" DECIMAL,
     "purpose" "Purpose",
     "configuration" JSONB,
     "pcBuildId" TEXT,
@@ -220,6 +220,7 @@ CREATE TABLE "OrderItem" (
     "name" TEXT NOT NULL,
     "price" DECIMAL(65,30) NOT NULL,
     "quantity" INTEGER NOT NULL DEFAULT 1,
+    "costPrice" DECIMAL,
 
     CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id")
 );
@@ -349,6 +350,32 @@ CREATE UNIQUE INDEX "SeoMetadata_path_key" ON "SeoMetadata"("path");
 -- CreateIndex
 CREATE UNIQUE INDEX "SiteSettings_key_key" ON "SiteSettings"("key");
 
+-- Lead status history
+CREATE TABLE "LeadStatusHistory" (
+    "id" TEXT NOT NULL,
+    "leadId" TEXT NOT NULL,
+    "fromStatus" "LeadStatus",
+    "toStatus" "LeadStatus" NOT NULL,
+    "comment" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "LeadStatusHistory_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "LeadStatusHistory_leadId_createdAt_idx" ON "LeadStatusHistory"("leadId", "createdAt");
+
+-- Order status history
+CREATE TABLE "OrderStatusHistory" (
+    "id" TEXT NOT NULL,
+    "orderId" TEXT NOT NULL,
+    "fromStatus" "OrderStatusStage",
+    "toStatus" "OrderStatusStage" NOT NULL,
+    "comment" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "OrderStatusHistory_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "OrderStatusHistory_orderId_createdAt_idx" ON "OrderStatusHistory"("orderId", "createdAt");
+
 -- AddForeignKey
 ALTER TABLE "Component" ADD CONSTRAINT "Component_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "ComponentCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
@@ -384,6 +411,9 @@ ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_pcBuildId_fkey" FOREIGN KEY ("
 
 -- AddForeignKey
 ALTER TABLE "Payment" ADD CONSTRAINT "Payment_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "LeadStatusHistory" ADD CONSTRAINT "LeadStatusHistory_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "OrderStatusHistory" ADD CONSTRAINT "OrderStatusHistory_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PortfolioImage" ADD CONSTRAINT "PortfolioImage_portfolioId_fkey" FOREIGN KEY ("portfolioId") REFERENCES "Portfolio"("id") ON DELETE CASCADE ON UPDATE CASCADE;
