@@ -1,97 +1,89 @@
-# Prisma migrations — безопасный порядок работы
+# Prisma migrations — clean development baseline
 
-## Главное
+## Что изменено
 
-Для существующей базы **не использовать** `prisma migrate reset`.
+Историческая цепочка из нескольких миграций была заменена на одну чистую baseline-миграцию:
 
-Проект содержит каталог миграций Prisma. Обычная синхронизация выполняется через:
+`20261007000000_clean_baseline`
+
+Она соответствует текущему `backend/prisma/schema.prisma` и сразу создаёт актуальную структуру CustomPC.
+
+В baseline уже включены:
+
+- все текущие ENUM;
+- каталог комплектующих и сборок;
+- конфигуратор;
+- услуги;
+- заявки и заказы;
+- LeadStatusHistory;
+- OrderStatusHistory;
+- платежи;
+- costPrice / profit;
+- agreedPrice;
+- Customer.email;
+- SiteSettings;
+- портфолио, отзывы, статьи и SEO.
+
+Старые repair-миграции больше не нужны.
+
+## Важно
+
+Эта ветка предназначена для **чистой dev-базы**.
+
+Если база содержит данные, сначала сделай резервную копию. Не запускай reset на базе, данные которой нужно сохранить.
+
+## Чистый запуск с нуля
+
+После checkout этой ветки:
 
 ```powershell
 cd C:\projects\webCustomPC\custompc
-git pull origin main
+git checkout refactor/clean-prisma-migrations
+git pull origin refactor/clean-prisma-migrations
 
 cd backend
 npm install
 npx prisma generate
-npm run db:status
-npm run db:deploy
+npx prisma migrate reset --force
+npx prisma migrate status
 ```
 
-После `db:deploy` снова проверить:
-
-```powershell
-npm run db:status
-```
-
-Ожидаемый результат:
+После reset ожидается:
 
 ```
 Database schema is up to date!
 ```
 
-## Текущий repair-кейс
-
-Миграция:
-
-`20261005100000_repair_missing_status_history_tables`
-
-восстанавливает таблицы:
-
-- `LeadStatusHistory`
-- `OrderStatusHistory`
-
-Она сделана идемпотентно через `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS` и проверку foreign key.
-
-Это важно для баз, в которых старые миграции были отмечены Prisma как выполненные, но физические таблицы отсутствовали.
-
-## Чистая новая база
-
-Для новой пустой PostgreSQL-базы ничего вручную создавать не нужно:
+Затем можно наполнить базу:
 
 ```powershell
-npm run db:deploy
+npm run seed:content
+```
+
+## Почему здесь допустим migrate reset
+
+Мы сознательно пересобираем **локальную development-базу с нуля**. Reset удаляет существующие dev-данные и создаёт схему заново по одной baseline-миграции.
+
+Для production или базы с важными данными этот сценарий не использовать.
+
+## После миграции
+
+Проверить:
+
+```powershell
 npx prisma generate
+npm run build
+npm run db:status
 ```
 
-Prisma применит всю цепочку миграций по порядку.
-
-## Существующая база с данными
-
-Не удалять базу и не выполнять `migrate reset`.
-
-Порядок:
-
-1. Забрать актуальный `main`.
-2. Сгенерировать Prisma Client.
-3. Проверить статус миграций.
-4. Выполнить `db:deploy`.
-5. Перезапустить backend.
-6. Проверить критические admin/API сценарии.
-
-## Почему `migrate status` мог сказать "up to date"
-
-Prisma проверяет наличие и состояние миграций, которые присутствуют локально в `prisma/migrations`.
-
-Если локальный checkout содержит 8 миграций, а актуальный `main` уже содержит 9-ю repair-миграцию, локальная Prisma может сказать:
-
-`Database schema is up to date!`
-
-при этом новая repair-миграция ещё физически не запускалась.
-
-Поэтому после изменений в `main` сначала нужно обновить рабочую копию:
+Затем запустить backend:
 
 ```powershell
-git pull origin main
+npm run start:dev
 ```
 
-## Запрещённый сценарий для этой базы
+## Следующий шаг
 
-Не выполнять:
+После успешной проверки этой ветки создаём PR в `main`.
 
-```powershell
-npx prisma migrate reset
-```
-
-если нет отдельного решения удалить все данные.
-
-Также не нужно вручную удалять записи из `_prisma_migrations`, чтобы "заставить" Prisma повторить старую миграцию. Для исправления уже существующей базы используется новая repair-миграция.
+Не надо возвращать старые миграции или добавлять очередные repair-миграции поверх baseline.
