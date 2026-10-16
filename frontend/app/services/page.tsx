@@ -71,12 +71,12 @@ function serviceTypeLabel(type: Service["type"]) {
     UPGRADE: "Апгрейд",
     REPAIR: "Ремонт",
     MAINTENANCE: "Обслуживание",
-  }[type];
+  }[type] ?? type;
 }
 
 function formatServicePrice(service: Service) {
-  if (service.priceFrom && service.priceTo) return `${Number(service.priceFrom).toLocaleString("ru-RU")}–${Number(service.priceTo).toLocaleString("ru-RU")} ₽`;
-  if (service.priceFrom) return `от ${Number(service.priceFrom).toLocaleString("ru-RU")} ₽`;
-  if (service.priceTo) return `до ${Number(service.priceTo).toLocaleString("ru-RU")} ₽`;
+  if (service.priceFrom != null && service.priceTo != null) return `${Number(service.priceFrom).toLocaleString("ru-RU")}–${Number(service.priceTo).toLocaleString("ru-RU")} ₽`;
+  if (service.priceFrom != null) return `от ${Number(service.priceFrom).toLocaleString("ru-RU")} ₽`;
+  if (service.priceTo != null) return `до ${Number(service.priceTo).toLocaleString("ru-RU")} ₽`;
   return "Цена уточняется";
 }
