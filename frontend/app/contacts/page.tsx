@@ -1,22 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-// Контакты пока захардкожены. По разделу 41 ТЗ их нужно редактировать из
-// админки без правки кода (через SiteSettings) — перенесём туда, когда
-// дойдём до раздела "Управление контентом".
-const CONTACTS = {
-  city: "Нефтекамск, Республика Башкортостан",
-  phone: "+7 (000) 000-00-00",
-  telegram: "https://t.me/customps",
-  avito: "https://www.avito.ru",
-};
+type PublicContacts = Partial<Record<"phone" | "telegram_url" | "avito_url" | "email" | "address" | "work_hours", string>>;
 
 export default function ContactsPage() {
+  const [contacts, setContacts] = useState<PublicContacts>({});
+  const [contactsError, setContactsError] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${API_URL}/site-settings`, { cache: "no-store", signal: controller.signal })
+      .then((res) => { if (!res.ok) throw new Error("Contacts unavailable"); return res.json() as Promise<PublicContacts>; })
+      .then(setContacts)
+      .catch((error) => { if (error?.name !== "AbortError") setContactsError(true); });
+    return () => controller.abort();
+  }, []);
   const [status, setStatus] = useState<
     "idle" | "sending" | "success" | "error"
   >("idle");
@@ -54,53 +56,56 @@ export default function ContactsPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-16">
         <h1 className="font-display text-3xl font-semibold">Контакты</h1>
-        <p className="mt-3 text-muted">{CONTACTS.city}</p>
+        {contacts.address && <p className="mt-3 text-muted">{contacts.address}</p>}
+        {contactsError && <p className="mt-3 text-red-400">Не удалось загрузить контакты.</p>}
 
         <div className="mt-12 grid grid-cols-1 gap-12 md:grid-cols-2">
           <div>
             <dl className="flex flex-col gap-5">
-              <div>
+              {contacts.phone && <div>
                 <dt className="font-mono text-xs text-muted">Телефон</dt>
                 <dd className="mt-1">
                   <a
-                    href={`tel:${CONTACTS.phone.replace(/[^\d+]/g, "")}`}
+                    href={`tel:${contacts.phone.replace(/[^\d+]/g, "")}`}
                     className="font-mono text-lg text-accent hover:text-accent-hover"
                   >
-                    {CONTACTS.phone}
+                    {contacts.phone}
                   </a>
                 </dd>
-              </div>
+              </div>}
 
-              <div>
+              {contacts.telegram_url && <div>
                 <dt className="font-mono text-xs text-muted">Telegram</dt>
                 <dd className="mt-1">
                   <a
-                    href={CONTACTS.telegram}
+                    href={contacts.telegram_url}
                     target="_blank"
                     className="text-accent hover:text-accent-hover"
                   >
                     Написать в Telegram
                   </a>
                 </dd>
-              </div>
+              </div>}
 
-              <div>
+              {contacts.avito_url && <div>
                 <dt className="font-mono text-xs text-muted">Авито</dt>
                 <dd className="mt-1">
                   <a
-                    href={CONTACTS.avito}
+                    href={contacts.avito_url}
                     target="_blank"
                     className="text-accent hover:text-accent-hover"
                   >
                     Смотреть объявления
                   </a>
                 </dd>
-              </div>
+              </div>}
 
-              <div>
-                <dt className="font-mono text-xs text-muted">Город</dt>
-                <dd className="mt-1 text-text">{CONTACTS.city}</dd>
-              </div>
+              {contacts.address && <div>
+                <dt className="font-mono text-xs text-muted">Адрес</dt>
+                <dd className="mt-1 text-text">{contacts.address}</dd>
+              </div>}
+              {contacts.email && <div><dt className="font-mono text-xs text-muted">Email</dt><dd className="mt-1"><a className="text-accent" href={`mailto:${contacts.email}`}>{contacts.email}</a></dd></div>}
+              {contacts.work_hours && <div><dt className="font-mono text-xs text-muted">Режим работы</dt><dd className="mt-1 text-text">{contacts.work_hours}</dd></div>}
             </dl>
 
             <div className="mt-8 flex aspect-video items-center justify-center rounded-md border border-border bg-surface font-mono text-sm text-muted">
