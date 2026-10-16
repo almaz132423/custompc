@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ThemeSwitcher } from "./theme-switcher";
 import { AccessibilityPanel } from "./accessibility-panel";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const NAV_LINKS = [
   { href: "/pc", label: "Каталог ПК" },
@@ -15,6 +18,18 @@ const NAV_LINKS = [
 ];
 
 export function SiteHeader() {
+  const [avitoUrl, setAvitoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${API_URL}/site-settings`, { cache: "no-store", signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error("Settings unavailable");
+        return res.json() as Promise<{ avito_url?: string }>;
+      })
+      .then((settings) => setAvitoUrl(settings.avito_url || null))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-5">
@@ -37,14 +52,16 @@ export function SiteHeader() {
         <div className="flex shrink-0 items-center gap-2">
           <AccessibilityPanel />
           <ThemeSwitcher />
-          <Link
-            href="https://www.avito.ru"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden font-sans text-sm text-muted transition-colors hover:text-text sm:block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
-            Авито
-          </Link>
+          {avitoUrl && (
+            <a
+              href={avitoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden font-sans text-sm text-muted transition-colors hover:text-text sm:block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              Авито
+            </a>
+          )}
         </div>
       </div>
     </header>
