@@ -55,6 +55,22 @@ describe('DashboardService', () => {
     );
   });
 
+  it('does not report partial profit as total when service costs are unknown', async () => {
+    prisma.order.findMany.mockResolvedValueOnce([
+      { totalPrice: 2000, costPrice: null, profit: null, payments: [{ amount: 500 }] },
+    ]);
+    prisma.order.aggregate
+      .mockResolvedValueOnce({ _sum: { totalPrice: 2000 }, _count: { _all: 1 } })
+      .mockResolvedValueOnce({ _sum: { costPrice: null, profit: null } });
+
+    const result = await service.getSummary('2026-10-01', '2026-10-09');
+
+    expect(result.finance.profit).toBeNull();
+    expect(result.finance.ordersWithUnknownCost).toBe(1);
+    expect(result.finance.ordersWithUnknownProfit).toBe(1);
+    expect(result.finance.outstanding).toBe(1500);
+  });
+
   it('rejects an invalid start date', async () => {
     await expect(service.getSummary('not-a-date', '2026-10-09')).rejects.toThrow(
       'Некорректная дата from',

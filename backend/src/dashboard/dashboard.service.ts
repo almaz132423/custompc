@@ -39,7 +39,7 @@ export class DashboardService {
         }),
         this.prisma.order.findMany({
           where: { createdAt: { gte: start, lt: end } },
-          select: { totalPrice: true, payments: { select: { amount: true } } },
+          select: { totalPrice: true, costPrice: true, profit: true, payments: { select: { amount: true } } },
         }),
         this.prisma.lead.findMany({
           orderBy: { createdAt: 'desc' },
@@ -63,6 +63,11 @@ export class DashboardService {
         order.payments.reduce((paid, payment) => paid + Number(payment.amount), 0),
       0,
     );
+
+    // Prisma SUM ignores NULL. A partial sum is not the total profit when
+    // one or more orders have unknown costs (e.g. service-only orders).
+    const ordersWithUnknownCost = receivables.filter((order) => order.costPrice == null).length;
+    const ordersWithUnknownProfit = receivables.filter((order) => order.profit == null).length;
 
     return {
       period: { from: start.toISOString(), to: end.toISOString() },
@@ -93,7 +98,9 @@ export class DashboardService {
         sales: this.decimalToNumber(sales._sum.totalPrice),
         paid: this.decimalToNumber(payments._sum.amount),
         cost: this.decimalToNumber(costAndProfit._sum.costPrice),
-        profit: this.decimalToNumber(costAndProfit._sum.profit),
+        profit: ordersWithUnknownProfit ? null : this.decimalToNumber(costAndProfit._sum.profit),
+        ordersWithUnknownCost,
+        ordersWithUnknownProfit,
         outstanding: Math.max(0, outstanding),
         ordersCount: sales._count._all,
         paymentsCount: payments._count._all,
