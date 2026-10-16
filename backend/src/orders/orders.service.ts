@@ -64,6 +64,18 @@ export class OrdersService {
       });
     }
 
+    // A service request has no PC build or configurator components.
+    // Use the agreed service price and preserve the service name as the order item.
+    // Unknown service costs must remain null (not zero) to avoid overstating profit.
+    if (!lead.pcBuild && !configuration?.components.length && lead.category?.trim()) {
+      items = [{
+        name: lead.category.trim(),
+        price: totalPrice,
+        quantity: 1,
+        costPrice: null,
+      }];
+    }
+
     if (!items.length || items.some((item) => !Number.isFinite(item.price) || item.price < 0)) {
       throw new BadRequestException('В заявке отсутствует корректный состав заказа');
     }
