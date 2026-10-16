@@ -48,6 +48,55 @@ describe('OrdersService — lead to order validation', () => {
     );
   });
 
+  it('records AGREED → ORDER in lead history inside the order transaction', async () => {
+    const order = {
+      id: 'order-1',
+      number: 'ORD-TEST',
+      status: 'NEW',
+      paymentStatus: 'UNPAID',
+      totalPrice: { toString: () => '50000' },
+      customer: { name: 'Customer' },
+      lead: { name: 'Customer' },
+    };
+    const tx = {
+      customer: { findUnique: vi.fn().mockResolvedValue({ id: 'customer-1' }) },
+      order: { create: vi.fn().mockResolvedValue(order) },
+      lead: { update: vi.fn().mockResolvedValue({}) },
+      leadStatusHistory: { create: vi.fn().mockResolvedValue({}) },
+    };
+    prisma.lead.findUnique.mockResolvedValue({
+      id: 'lead-1',
+      status: 'AGREED',
+      order: null,
+      customerId: 'customer-1',
+      agreedPrice: 50000,
+      pcBuild: { id: 'build-1', name: 'PC', price: 50000, components: [] },
+      configuration: null,
+    });
+    (prisma as typeof prisma & { $transaction: ReturnType<typeof vi.fn> }).$transaction =
+      vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx));
+    const notifyOrderCreated = vi.fn().mockResolvedValue(undefined);
+    service = new OrdersService(
+      prisma as unknown as PrismaService,
+      { notifyOrderCreated } as unknown as NotificationsService,
+    );
+
+    await service.createFromLead('lead-1');
+
+    expect(tx.lead.update).toHaveBeenCalledWith({
+      where: { id: 'lead-1' },
+      data: { status: 'ORDER' },
+    });
+    expect(tx.leadStatusHistory.create).toHaveBeenCalledWith({
+      data: {
+        leadId: 'lead-1',
+        fromStatus: 'AGREED',
+        toStatus: 'ORDER',
+        comment: 'Создан заказ ORD-TEST',
+      },
+    });
+  });
+
   it('rejects updating a missing order', async () => {
     prisma.order.findUnique.mockResolvedValue(null);
     await expect(service.update('missing', { status: 'PAID' })).rejects.toThrow(NotFoundException);
