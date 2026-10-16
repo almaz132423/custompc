@@ -48,6 +48,81 @@ describe('OrdersService — lead to order validation', () => {
     );
   });
 
+  it('creates an order item from an agreed service-only lead without inventing costs', async () => {
+    const lead = {
+      id: 'lead-service',
+      status: 'AGREED',
+      order: null,
+      category: 'Сборка ПК',
+      agreedPrice: 2000,
+      pcBuild: null,
+      configuration: null,
+      customerId: 'customer-1',
+      comment: null,
+    };
+    prisma.lead.findUnique.mockResolvedValue(lead);
+    const createdOrder = {
+      id: 'order-1',
+      number: 'ORD-1',
+      status: 'NEW',
+      paymentStatus: 'UNPAID',
+      totalPrice: { toString: () => '2000' },
+      customer: { name: 'Customer' },
+      lead: { name: 'Customer' },
+    };
+    const tx = {
+      customer: { findUnique: vi.fn().mockResolvedValue({ id: 'customer-1' }) },
+      order: { create: vi.fn().mockResolvedValue(createdOrder) },
+      lead: { update: vi.fn().mockResolvedValue({}) },
+    };
+    const transaction = vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx));
+    const prismaWithTransaction = { ...prisma, $transaction: transaction };
+    const notifyOrderCreated = vi.fn().mockResolvedValue(undefined);
+    service = new OrdersService(
+      prismaWithTransaction as unknown as PrismaService,
+      { notifyOrderCreated } as unknown as NotificationsService,
+    );
+
+    await expect(service.createFromLead('lead-service')).resolves.toBe(createdOrder);
+    expect(tx.order.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          totalPrice: expect.objectContaining({ toString: expect.any(Function) }),
+          costPrice: undefined,
+          profit: undefined,
+          items: {
+            create: [{
+              name: 'Сборка ПК',
+              price: expect.objectContaining({ toString: expect.any(Function) }),
+              costPrice: undefined,
+              quantity: 1,
+              pcBuildId: undefined,
+            }],
+          },
+        }),
+      }),
+    );
+    expect(tx.lead.update).toHaveBeenCalledWith({
+      where: { id: 'lead-service' },
+      data: { status: 'ORDER' },
+    });
+  });
+
+  it('rejects a lead without a service name or configured items', async () => {
+    prisma.lead.findUnique.mockResolvedValue({
+      id: 'lead-empty',
+      status: 'AGREED',
+      order: null,
+      agreedPrice: 2000,
+      category: null,
+      pcBuild: null,
+      configuration: null,
+    });
+    await expect(service.createFromLead('lead-empty')).rejects.toThrow(
+      'В заявке отсутствует корректный состав заказа',
+    );
+  });
+
   it('rejects updating a missing order', async () => {
     prisma.order.findUnique.mockResolvedValue(null);
     await expect(service.update('missing', { status: 'PAID' })).rejects.toThrow(NotFoundException);
