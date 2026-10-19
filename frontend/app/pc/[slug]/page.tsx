@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +11,18 @@ import {
 } from "@/lib/api";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const build = await getPcBuildBySlug(slug);
+  if (!build) return { title: "Сборка не найдена", robots: { index: false } };
+  return pageMetadata(
+    build.name + " — сборка ПК на заказ",
+    (build.description || "Характеристики и комплектация " + build.name).slice(0, 160),
+    "/pc/" + encodeURIComponent(slug),
+    build.images[0]?.url,
+  );
+}
 
 export default async function PcBuildPage({
   params,
