@@ -105,6 +105,7 @@ export class CompatibilityService {
       include: { category: true },
     });
     if (!component) throw new BadRequestException('Комплектующее не найдено');
+    if (!component.inStock) throw new BadRequestException('Комплектующее отсутствует в наличии');
 
     const components = [
       ...build.components
@@ -129,7 +130,26 @@ export class CompatibilityService {
 
     this.matchField(issues, cpu, motherboard, 'socket', 'Процессор и материнская плата используют разные сокеты');
     this.matchField(issues, motherboard, ram, 'ramType', 'Материнская плата и оперативная память используют разные типы памяти');
-    this.matchField(issues, motherboard, pcCase, 'formFactor', 'Форм-фактор материнской платы не поддерживается корпусом');
+    // A case can support multiple motherboard sizes; exact equality is too strict.
+    if (motherboard && pcCase) {
+      const boardFormFactor = this.stringValue(motherboard.compatibility, 'formFactor');
+      const caseFormFactors = this.value(pcCase.compatibility, 'supportedFormFactors');
+      const caseFormFactor = this.stringValue(pcCase.compatibility, 'formFactor');
+      const supported = Array.isArray(caseFormFactors)
+        ? caseFormFactors.filter((item): item is string => typeof item === 'string')
+        : caseFormFactor ? [caseFormFactor] : [];
+      const normalized = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const board = boardFormFactor ? normalized(boardFormFactor) : undefined;
+      const fits = board && supported.some((size) => {
+        const normalizedSize = normalized(size);
+        return normalizedSize === board ||
+          (normalizedSize === 'ATX' && ['MATX', 'MICROATX', 'MINIITX', 'ITX'].includes(board)) ||
+          (['MATX', 'MICROATX'].includes(normalizedSize) && ['MINIITX', 'ITX'].includes(board));
+      });
+      if (board && supported.length && !fits) {
+        issues.push({ type: 'PAIR', message: 'Форм-фактор материнской платы не поддерживается корпусом', componentIds: [motherboard.id, pcCase.id] });
+      }
+    }
     this.matchField(issues, cpu, cooling, 'socket', 'Охлаждение не поддерживает сокет процессора');
 
     const gpuLength = this.numberValue(gpu?.compatibility, 'lengthMm');
