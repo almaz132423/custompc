@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { siteUrl } from "@/lib/seo";
 import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -23,9 +24,12 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CustomPS — сборка ПК на заказ в Нефтекамске",
+  metadataBase: new URL(siteUrl),
+  title: { default: "CustomPS — сборка ПК на заказ в Нефтекамске", template: "%s | CustomPS" },
   description:
     "Подберём и соберём компьютер под ваши задачи и бюджет. Игры, работа, 3D, стриминг, AI.",
+  robots: { index: true, follow: true },
+  openGraph: { type: "website", locale: "ru_RU", siteName: "CustomPS" },
 };
 
 export default function RootLayout({
