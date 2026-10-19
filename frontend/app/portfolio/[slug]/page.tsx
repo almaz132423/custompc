@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
@@ -5,6 +7,18 @@ import { SiteFooter } from "@/components/site-footer";
 import { formatPrice, getPublicPortfolioItem, type PortfolioItem } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const item = await getPublicPortfolioItem(slug);
+  if (!item) return { title: "Работа не найдена", robots: { index: false } };
+  return pageMetadata(
+    item.title + " — портфолио CustomPS",
+    (item.description || item.clientTask || "Реальная работа по сборке и обслуживанию ПК").slice(0, 160),
+    "/portfolio/" + encodeURIComponent(slug),
+    item.images[0]?.url,
+  );
+}
 
 export default async function PortfolioDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
