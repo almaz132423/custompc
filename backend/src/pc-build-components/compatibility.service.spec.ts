@@ -28,6 +28,26 @@ describe('CompatibilityService', () => {
     expect(issues.some((issue) => issue.message.includes('Форм-фактор'))).toBe(true);
   });
 
+  it('enforces an active rule requiring a missing component category', async () => {
+    const issues = await service.validateComponents([
+      part('cpu', 'CPU', { socket: 'AM5' }),
+    ], [{
+      id: 'rule-1', name: 'CPU requires cooling', description: null, isActive: true,
+      rule: { if: { category: 'CPU' }, requires: { category: 'COOLING' } },
+    }]);
+    expect(issues).toEqual([expect.objectContaining({ type: 'RULE', componentIds: ['cpu'] })]);
+  });
+
+  it('rejects two components in the same build category', async () => {
+    prisma.pCBuild.findUnique.mockResolvedValue({
+      components: [{ componentId: 'cpu-1', component: part('cpu-1', 'CPU', { socket: 'AM5' }) }],
+    });
+    prisma.component.findUnique.mockResolvedValue({ ...part('cpu-2', 'CPU', { socket: 'AM5' }), inStock: true });
+    await expect(service.assertComponentCanBeAdded('build', 'cpu-2')).rejects.toThrow(
+      'В сборке нельзя выбрать два комплектующих одной категории',
+    );
+  });
+
   it('rejects adding an out-of-stock component to a build', async () => {
     prisma.pCBuild.findUnique.mockResolvedValue({ components: [] });
     prisma.component.findUnique.mockResolvedValue({ ...part('gpu', 'GPU', {}), inStock: false });
