@@ -113,6 +113,10 @@ export class CompatibilityService {
         .map((link) => link.component),
       component,
     ];
+    const categoryCodes = components.map((item) => item.category.code);
+    if (new Set(categoryCodes).size !== categoryCodes.length) {
+      throw new BadRequestException('В сборке нельзя выбрать два комплектующих одной категории');
+    }
     const issues = await this.validateComponents(components);
     if (issues.length) throw new BadRequestException(issues.map((issue) => issue.message));
   }
@@ -196,9 +200,7 @@ export class CompatibilityService {
     if (!source) return null;
 
     const requiredCategory = typeof requires.category === 'string' ? requires.category : undefined;
-    if (requiredCategory && !components.some((component) => component.category.code === requiredCategory)) {
-      return null;
-    }
+
 
     const target = components.find((component) => this.matches(component, requires));
     if (target) return null;
