@@ -217,7 +217,8 @@ async function main() {
         // Dataset contains a USD price snapshot, while Component.price is the\n        // application price. Do not import USD into the application's price field.\n        price: null,
         specs: toSpecs(source, item.category, `${DATASET_BASE}/${item.file}`),
         compatibility,
-        inStock: true,
+        // The reference dataset is not verified store inventory.
+        inStock: false,
       };
 
       const id = stableId(item.category, name, index);

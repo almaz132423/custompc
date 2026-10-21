@@ -122,6 +122,13 @@ export class OrdersService {
       });
 
       await tx.lead.update({ where: { id: lead.id }, data: { status: 'ORDER' } });
+      await tx.leadStatusHistory.create({
+        data: {
+          leadId: lead.id,
+          fromStatus: 'AGREED',
+          toStatus: 'ORDER',
+        },
+      });
       return order;
     });
 

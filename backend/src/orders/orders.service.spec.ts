@@ -74,6 +74,7 @@ describe('OrdersService — lead to order validation', () => {
       customer: { findUnique: vi.fn().mockResolvedValue({ id: 'customer-1' }) },
       order: { create: vi.fn().mockResolvedValue(createdOrder) },
       lead: { update: vi.fn().mockResolvedValue({}) },
+      leadStatusHistory: { create: vi.fn().mockResolvedValue({}) },
     };
     const transaction = vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx));
     const prismaWithTransaction = { ...prisma, $transaction: transaction };
@@ -105,6 +106,13 @@ describe('OrdersService — lead to order validation', () => {
     expect(tx.lead.update).toHaveBeenCalledWith({
       where: { id: 'lead-service' },
       data: { status: 'ORDER' },
+    });
+    expect(tx.leadStatusHistory.create).toHaveBeenCalledWith({
+      data: {
+        leadId: 'lead-service',
+        fromStatus: 'AGREED',
+        toStatus: 'ORDER',
+      },
     });
   });
 
