@@ -69,6 +69,8 @@ export class DashboardService {
       0,
     );
 
+    // Prisma SUM ignores NULL. A partial sum is not the total profit when
+    // one or more orders have unknown costs (e.g. service-only orders).
     const ordersWithUnknownCost = receivables.filter((order) => order.costPrice == null).length;
     const ordersWithUnknownProfit = receivables.filter((order) => order.profit == null).length;
 
