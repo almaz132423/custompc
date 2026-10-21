@@ -2,10 +2,13 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { getPublicServices, type Service } from "@/lib/api";
+import { absoluteUrl, jsonLd, pageMetadata, siteName } from "@/lib/seo";
 
-export const metadata = {
-  title: "Услуги — CustomPS",
-};
+export const metadata = pageMetadata(
+  "Сборка, ремонт и обслуживание ПК",
+  "Услуги CustomPS в Нефтекамске: сборка компьютеров, апгрейд, диагностика и ремонт техники.",
+  "/services",
+);
 
 export default async function ServicesPage() {
   const services = await getPublicServices();
@@ -15,6 +18,25 @@ export default async function ServicesPage() {
       <SiteHeader />
 
       <main className="mx-auto max-w-6xl px-6 py-16">
+        {services.length > 0 && <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={jsonLd({
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            itemListElement: services.map((service, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              item: {
+                "@type": "Service",
+                name: service.name,
+                ...(service.description ? { description: service.description } : {}),
+                serviceType: serviceTypeLabel(service.type),
+                areaServed: { "@type": "City", name: "Нефтекамск" },
+                provider: { "@type": "Organization", name: siteName, url: absoluteUrl("/") },
+              },
+            })),
+          })}
+        />}
         <h1 className="font-display text-3xl font-semibold">Услуги</h1>
         <p className="mt-3 max-w-xl text-muted">
           Не только продажа готовых ПК — полный цикл обслуживания техники:

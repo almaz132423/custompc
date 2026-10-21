@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { formatPrice, getPublicPortfolioItem, type PortfolioItem } from "@/lib/api";
+import { formatPrice, getPublicPortfolioItem } from "@/lib/api";
+import { absoluteUrl, jsonLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const item = await getPublicPortfolioItem(slug);
   if (!item) return { title: "Работа не найдена", robots: { index: false } };
   return pageMetadata(
-    item.title + " — портфолио CustomPS",
+    item.title,
     (item.description || item.clientTask || "Реальная работа по сборке и обслуживанию ПК").slice(0, 160),
     "/portfolio/" + encodeURIComponent(slug),
     item.images[0]?.url,
@@ -29,12 +31,24 @@ export default async function PortfolioDetailPage({ params }: { params: Promise<
     <div className="min-h-screen bg-ink">
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-6 py-16">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={jsonLd({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Главная", item: absoluteUrl("/") },
+              { "@type": "ListItem", position: 2, name: "Портфолио", item: absoluteUrl("/portfolio") },
+              { "@type": "ListItem", position: 3, name: item.title, item: absoluteUrl(`/portfolio/${encodeURIComponent(item.slug)}`) },
+            ],
+          })}
+        />
         <Link href="/portfolio" className="text-sm text-muted hover:text-text">← Все работы</Link>
         <h1 className="mt-6 font-display text-3xl font-semibold">{item.title}</h1>
         {item.budget && <p className="mt-3 font-mono text-sm text-muted">Бюджет: {formatPrice(item.budget)}</p>}
         {item.images.length > 0 && (
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            {item.images.map((image) => <img key={image.id} src={image.url} alt={item.title} className="w-full rounded-md border border-border object-cover" />)}
+            {item.images.map((image) => <Image key={image.id} src={image.url} alt={`${item.title} — фото работы`} width={1200} height={800} unoptimized className="h-auto w-full rounded-md border border-border object-cover" />)}
           </div>
         )}
         <div className="mt-10 grid gap-8 md:grid-cols-2">

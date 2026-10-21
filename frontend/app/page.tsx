@@ -3,6 +3,13 @@ import { getPcBuilds } from "@/lib/api";
 import { PcBuildCard } from "@/components/pc-build-card";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { absoluteUrl, jsonLd, pageMetadata, siteName, siteUrl } from "@/lib/seo";
+
+export const metadata = pageMetadata(
+  "Сборка ПК на заказ в Нефтекамске",
+  "Подберём и соберём компьютер в Нефтекамске под ваши задачи и бюджет: для игр, работы, 3D, стриминга и AI.",
+  "/",
+);
 
 const QUICK_PICKS = [
   { label: "Игровой ПК", purpose: "games" },
@@ -17,6 +24,27 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-ink">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd({
+          "@context": "https://schema.org",
+          "@type": "ComputerStore",
+          "@id": absoluteUrl("/#business"),
+          name: siteName,
+          url: siteUrl,
+          description: "Подбор и сборка компьютеров на заказ в Нефтекамске.",
+          areaServed: {
+            "@type": "City",
+            name: "Нефтекамск",
+          },
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Нефтекамск",
+            addressRegion: "Республика Башкортостан",
+            addressCountry: "RU",
+          },
+        })}
+      />
       <SiteHeader />
 
       <main>

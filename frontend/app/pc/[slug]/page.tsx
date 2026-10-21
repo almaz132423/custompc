@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { absoluteUrl, jsonLd, siteName } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -44,6 +45,40 @@ export default async function PcBuildPage({
       <SiteHeader />
 
       <main className="mx-auto max-w-5xl px-6 py-16">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={jsonLd({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: build.name,
+            description: build.description || `Компьютер ${build.name}, сборка CustomPS в Нефтекамске.`,
+            ...(image ? { image: [image] } : {}),
+            brand: { "@type": "Brand", name: siteName },
+            sku: build.slug,
+            offers: {
+              "@type": "Offer",
+              url: absoluteUrl(`/pc/${encodeURIComponent(build.slug)}`),
+              priceCurrency: "RUB",
+              price: Number(build.price),
+              ...(build.status ? {
+                availability: build.status === "AVAILABLE" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              } : {}),
+              itemCondition: "https://schema.org/NewCondition",
+            },
+          })}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={jsonLd({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Главная", item: absoluteUrl("/") },
+              { "@type": "ListItem", position: 2, name: "Каталог ПК", item: absoluteUrl("/pc") },
+              { "@type": "ListItem", position: 3, name: build.name, item: absoluteUrl(`/pc/${encodeURIComponent(build.slug)}`) },
+            ],
+          })}
+        />
         <Link
           href="/pc"
           className="font-mono text-xs text-muted transition-colors hover:text-accent"

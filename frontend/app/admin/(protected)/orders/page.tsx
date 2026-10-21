@@ -136,6 +136,7 @@ export default function AdminOrdersPage() {
             <div className="mt-1 flex justify-between"><span className="text-muted">Остаток</span><span>{Math.max(0, Number(selected.totalPrice) - (selected.payments ?? []).reduce((sum, p) => sum + Number(p.amount), 0)).toFixed(2)} ₽</span></div>
             <div className="mt-3 grid gap-2"><input value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} type="number" min="0.01" step="0.01" placeholder="Сумма платежа" className="admin-input" /><input value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} placeholder="Способ оплаты" className="admin-input" /><button onClick={savePayment} disabled={saving || !paymentAmount} className="admin-button-secondary">Добавить оплату</button></div>
           </div>
+          <a href={`/admin/orders/${selected.id}/document`} target="_blank" rel="noreferrer" className="admin-button-secondary mt-4 block w-full text-center">Подготовить договор и распечатать</a>
           <h3 className="mt-7 font-medium">Состав заказа</h3>
           <div className="mt-3 space-y-2">
             {selected.items.map((item) => <div key={item.id} className="flex justify-between gap-4 border-b border-border pb-2 text-sm"><span>{item.name} × {item.quantity}</span><span>{item.price} ₽</span></div>)}

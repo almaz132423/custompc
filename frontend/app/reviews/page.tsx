@@ -1,8 +1,14 @@
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { getPublicReviews, type Review } from "@/lib/api";
+import { pageMetadata } from "@/lib/seo";
+import Image from "next/image";
 
-export const metadata = { title: "Отзывы — CustomPS" };
+export const metadata = pageMetadata(
+  "Отзывы клиентов",
+  "Отзывы клиентов о сборке, настройке и обслуживании компьютеров CustomPS.",
+  "/reviews",
+);
 
 export default async function ReviewsPage() {
   const reviews = await getPublicReviews();
@@ -18,6 +24,6 @@ function ReviewCard({ review }: { review: Review }) {
     <div className="flex items-center justify-between gap-4"><div className="font-medium">{review.customerName}</div><span className="font-mono text-sm" aria-label={`Оценка: ${review.rating} из 5`}>{"★".repeat(review.rating)}{"☆".repeat(5-review.rating)}</span></div>
     <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted">{review.text}</p>
     {review.purchasedBuild && <p className="mt-4 text-xs text-muted">{review.purchasedBuild}</p>}
-    {review.photoUrl && <img src={review.photoUrl} alt={`Фото клиента ${review.customerName}`} className="mt-4 max-h-72 w-full rounded-md object-cover" />}
+    {review.photoUrl && <Image src={review.photoUrl} alt={`Фото клиента ${review.customerName}`} width={1200} height={800} unoptimized className="mt-4 max-h-72 w-full rounded-md object-cover" />}
   </article>;
 }

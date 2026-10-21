@@ -3,10 +3,13 @@ import { PcBuildCard } from "@/components/pc-build-card";
 import { PcCatalogFilters } from "@/components/pc-catalog-filters";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Каталог ПК — CustomPS",
-};
+export const metadata = pageMetadata(
+  "Каталог компьютеров",
+  "Готовые компьютеры CustomPS в Нефтекамске. Смотрите конфигурации, характеристики и цены, заказывайте или меняйте сборку.",
+  "/pc",
+);
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 

@@ -130,6 +130,7 @@ npm install
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
 Запустить frontend:
@@ -139,6 +140,8 @@ npm run dev
 ```
 
 Frontend: **http://localhost:3000**.
+
+Для production задай `NEXT_PUBLIC_SITE_URL` как основной публичный HTTPS-адрес сайта (без завершающего `/`). Он используется для canonical, Open Graph, sitemap и robots.txt; не оставляй локальный адрес в production.
 
 ## Ежедневный запуск
 

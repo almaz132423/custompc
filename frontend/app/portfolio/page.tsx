@@ -1,9 +1,15 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { formatPrice, getPublicPortfolio, type PortfolioItem } from "@/lib/api";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = { title: "Портфолио — CustomPS" };
+export const metadata = pageMetadata(
+  "Портфолио сборок и работ",
+  "Примеры сборок компьютеров и выполненных работ CustomPS в Нефтекамске.",
+  "/portfolio",
+);
 
 export default async function PortfolioPage() {
   const items = await getPublicPortfolio();
@@ -31,7 +37,7 @@ function PortfolioCard({ item }: { item: PortfolioItem }) {
   return (
     <Link href={`/portfolio/${item.slug}`} className="group overflow-hidden rounded-md border border-border bg-surface">
       <div className="aspect-[16/10] bg-ink">
-        {image ? <img src={image} alt={item.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" /> : <div className="flex h-full items-center justify-center text-sm text-muted">Фото пока нет</div>}
+        {image ? <Image src={image} alt={item.title} fill sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw" unoptimized className="object-cover transition-transform duration-300 group-hover:scale-[1.02]" /> : <div className="flex h-full items-center justify-center text-sm text-muted">Фото пока нет</div>}
       </div>
       <div className="p-5">
         <h2 className="font-display text-lg font-semibold">{item.title}</h2>

@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "О компании — CustomPS",
-};
+export const metadata = pageMetadata(
+  "О компании",
+  "CustomPS подбирает и собирает компьютеры в Нефтекамске: игровые, рабочие, для монтажа, 3D и других задач.",
+  "/about",
+);
 
 export default function AboutPage() {
   return (
@@ -19,7 +22,7 @@ export default function AboutPage() {
           CustomPS — локальная сборка и продажа компьютеров в Нефтекамске.
           Специализируемся на индивидуальном подборе конфигураций под
           конкретные задачи: игры, работу, монтаж, 3D, стриминг и AI —
-          вместо того чтобы предлагать типовые решения "для всех".
+          вместо того чтобы предлагать типовые решения &quot;для всех&quot;.
         </p>
 
         <h2 className="mt-12 font-display text-xl font-semibold">
